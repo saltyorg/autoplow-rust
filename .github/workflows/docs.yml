@@ -1,0 +1,39 @@
+name: docs
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  public-docs-guard:
+    name: Public docs guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check for environment-specific details
+        run: scripts/check-public-docs.sh
+
+  links:
+    name: Internal links
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check relative markdown links
+        run: scripts/check-links.sh
+
+  commit-messages:
+    name: Conventional commit messages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check commit subjects
+        env:
+          BEFORE: ${{ github.event.before || github.event.pull_request.base.sha }}
+          AFTER: ${{ github.sha }}
+        run: scripts/check-commit-messages.sh "$BEFORE" "$AFTER"
