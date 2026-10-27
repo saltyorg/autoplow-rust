@@ -1,5 +1,14 @@
 # Spec: managed Arr connections (v1)
 
+**Module:** `arr` · **Depends on:** core, notifications · **Decisions:** ADR-0012 · **Status:** approved 2026-10-27
+
+## Objective
+Talk to every Arr instance correctly: receive and parse their webhooks, and keep Autoplow's own webhook connection in each Arr present and correct without touching anyone else's.
+
+## Non-goals
+- Managing Arr settings beyond our own connection
+- Readarr (archived)
+
 ## Adding an Arr instance
 1. **Entry:** the user enters a URL and API key. The instance is added in the UI, through the API, or seeded from the bootstrap file.
 2. **Detection:** we call `system/status` to get `appName` and `version`, which select the API flavour:
@@ -63,3 +72,15 @@ Notes on the fixed event set:
 - **`Test` events:** answered with 2xx; nothing is queued.
 - **Unknown events:** answered with 2xx and logged at debug level. They never return 500.
 - **Request bodies:** limited in size.
+
+## Acceptance criteria
+1. Sonarr v4/v5, Radarr, Lidarr and Whisparr v2/v3 are detected from `system/status` and handled with the right API flavour.
+2. Creating a managed connection succeeds against an Arr that performs its test-on-save; the stored definition reads back identical.
+3. Drift (any changed field) is detected and repaired with one full PUT; no PUT is sent when there is no drift (Lidarr re-tests on every PUT).
+4. Connections not owned by Autoplow are never modified; old autoscan-style hooks are only listed and offered for removal after ours is verified.
+5. Every payload shape in the research doc (incl. Sonarr per-file vs ImportComplete `Download`, Lidarr `albums` Test) parses; unknown events return 2xx and are logged.
+
+## Boundaries
+- **Always:** follow `CONSTRAINTS.md`; validate external input at the boundary.
+- **Ask first:** Changing the fixed event set.
+- **Never:** Put tags on our connection; Modify connections we do not own.

@@ -1,5 +1,14 @@
 # Spec: bootstrap file and REST API (v1)
 
+**Module:** `core` · **Depends on:** — · **Decisions:** ADR-0007 · **Status:** approved 2026-10-27
+
+## Objective
+Configure Autoplow once from Ansible and manage it afterwards through a complete, idempotent REST API that the UI also uses.
+
+## Non-goals
+- The file as permanent source of truth
+- GraphQL
+
 ## Bootstrap file
 - **Location:**
   - `<config dir>/bootstrap.yml`
@@ -86,3 +95,14 @@ The detailed schema will be generated from the same Go types the API uses, as a 
 - **Events:** `GET /api/v1/events` (SSE) for the UI's live updates.
 - **Secrets in responses:** never returned. They are write-only fields, reported as `{"set": true}`.
 - **Errors:** RFC 9457 problem+json, with field-level validation errors.
+
+## Acceptance criteria
+1. A bootstrap file creates only missing resources; existing ones are never modified; a fully successful run deletes the file and writes a secret-free report; a partial failure keeps the file.
+2. `PUT /api/v1/<kind>/{name}` twice with the same body yields `unchanged` the second time; `POST /apply?dry_run=true` performs no writes.
+3. Secrets are never returned by any endpoint (`{"set": true}` only).
+4. Every UI page is built solely on public API endpoints.
+
+## Boundaries
+- **Always:** follow `CONSTRAINTS.md`; validate external input at the boundary.
+- **Ask first:** Breaking API changes.
+- **Never:** Return secrets; Accept unknown config keys silently.
