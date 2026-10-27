@@ -1,575 +1,608 @@
 # Autoplow task list
 
-**Format:**
-- Each task lists its acceptance criteria (AC), how to verify it (V), its dependencies (Dep) and its size.
-- Size is S or M. L means it has to be split before work starts.
+Aligned with the approved capability map (`docs/specs/README.md`). Each task names its **module ID** and the **spec acceptance criteria (AC)** it satisfies, e.g. `scan AC2` = `docs/specs/scan.md`, acceptance criterion 2. Sizes: S = 1–2 files, M = 3–5 files. Anything larger is split before work starts.
 
-**Standard verification for every task:**
-- `cargo test --workspace` passes.
-- `cargo build --release` succeeds.
-- `cargo clippy --workspace -- -D warnings` is clean, with the panic policy lints denied.
-- `cargo fmt --check` passes.
+**Definition of done (every task):**
+- `scripts/check-task.sh` passes, meaning every `CONSTRAINTS.md` gate: clippy, fmt, tests, changed-line coverage ≥ 90 %, mutation ≥ 80 %, cargo-deny, gitleaks, and the floor guard.
+- The cited spec ACs are covered by tests.
+- Docs are updated.
+- Committed as a Conventional Commit.
 
-## Phase 0: Foundation
+## Phase 0: `core` foundation
 
-### Task 0.1: Repository skeleton, CI, panic policy
+### Task 0.1: Workspace skeleton and lint configuration
 - [ ] **AC:**
-  - Cargo workspace with crates matching architecture.md (`paths`, `store`, `config`, `supervisor`, `api`, `targets`, `triggers`, `uploader`, …) and a binary crate.
-  - The workspace adopts `docs/quality-policy.md` exactly (configuration in its appendix): `[workspace.lints]`, `clippy.toml`, `rust-toolchain.toml` pinned to 1.99.1, release `overflow-checks`.
-  - CI runs every gate in the policy (fmt, clippy `-D warnings`, `lints.workspace` check, nextest, coverage floor, cargo-mutants on core crates, cargo-deny, cargo-machete), plus musl x86_64/aarch64 builds via cargo-zigbuild.
-  - The crate stack in plan.md is confirmed.
-  - The binary prints its version.
-- **V:** CI is green; `./autoplow --version` works.
+  - Cargo workspace with `crates/autoplow` (binary), `crates/core`, `crates/api-types` and `crates/ui` stubs.
+  - `[workspace.lints]`, `clippy.toml` and `rust-toolchain.toml` exactly as in the appendix of `docs/quality-policy.md`.
+  - Every crate sets `lints.workspace = true`.
+  - `autoplow --version` works.
+- **V:**
+  - `cargo clippy --workspace --all-targets -- -D warnings` and `cargo fmt --check` pass.
+  - A planted `unwrap()` fails clippy.
 - **Dep:** none.
-- **Size:** S.
+- **Files:** `Cargo.toml`, `clippy.toml`, `rust-toolchain.toml`, `crates/*/Cargo.toml`, `crates/autoplow/src/main.rs`.
+- **Size:** M.
 
-### Task 0.2: Paths package
+### Task 0.1b: Gate tooling, Rust CI and release automation
 - [ ] **AC:**
-  - Component-based containment.
-  - Rewrite rule sets that reject overlapping sources within a set.
+  - Every `CONSTRAINTS.md` tool is wired into `scripts/check-task.sh` and `.github/workflows/rust.yml`: nextest, llvm-cov + diff-cover, cargo-mutants + `scripts/check-mutants.sh`, cargo-deny + `deny.toml`, cargo-machete, gitleaks, trunk + `scripts/check-wasm-budget.sh`, Playwright + axe.
+  - release-please (`release-type: rust`).
+- **V:**
+  - Trial run on the branch is green.
+  - The floor guard catches a planted `#[allow]`, `todo!()` and `#[ignore]`.
+  - The project-coverage baseline is recorded in `CONSTRAINTS.md`.
+- **Dep:** 0.1.
+- **Files:** `scripts/check-task.sh`, `scripts/check-mutants.sh`, `scripts/check-wasm-budget.sh`, `deny.toml`, `.github/workflows/rust.yml` (+ `release-please-config.json`).
+- **Size:** M.
+
+### Task 0.2: Paths: `FolderPath`, scoped rewrite sets
+- [ ] **AC (core AC5):**
+  - Component containment.
+  - Overlapping sources rejected within a set.
   - Trigger, target and pair scopes, where a pair set replaces the target set.
   - Parent/child coalescing helper.
-- **V:**
-  - Table tests, including `/mnt/Movies` vs `/mnt/Movies4K`, trailing slashes, `..`.
-  - Property tests (proptest) for normalisation.
-- **Dep:** 0.1.
+- **V:** unit tests plus proptest (`/mnt/Movies` vs `/mnt/Movies4K`, trailing slashes, `..`).
+- **Dep:** 0.1b.
+- **Files:** `crates/core/src/paths/*.rs`.
 - **Size:** S.
 
 ### Task 0.3: Store and migrations
-- [ ] **AC:**
-  - SQLite in WAL mode with one writer and a reader pool.
-  - Embedded, versioned migrations with a migration test harness.
-  - A compare-and-set update helper.
-- **V:**
-  - Migration up tests on an empty database.
-  - Concurrency test: the writer serialises, readers don't block.
+- [ ] **AC (core AC4):**
+  - SQLite in WAL mode, one writer and a reader pool.
+  - Embedded, versioned migrations.
+  - Compare-and-set helper.
+  - Migration fixtures.
+- **V:** migration-up tests; writer-serialisation test.
 - **Dep:** 0.1.
+- **Files:** `crates/core/src/store/*.rs`, `crates/core/migrations/`.
 - **Size:** M.
 
 ### Task 0.4: Supervisor and component lifecycle
-- [ ] **AC:**
-  - `Run(ctx)` components with backoff restart.
-  - Config-snapshot dependency declarations.
-  - Stopping and rebuilding only the affected components.
-  - Graceful shutdown with a deadline.
-- **V:**
-  - Unit tests with fake components and a paused tokio clock: crash and restart, a config change rebuilds only the dependents, shutdown ordering.
+- [ ] **AC (core AC1–AC3):**
+  - Restart with backoff, including after a panic, with the component named in the log.
+  - A config change rebuilds only the dependent components.
+  - Shutdown within the deadline (30 s).
+- **V:** fake components and a paused clock.
 - **Dep:** 0.1.
+- **Files:** `crates/core/src/supervisor/*.rs`.
 - **Size:** M.
 
-### Task 0.5: Config model, bootstrap seed-once, apply API core
-- [ ] **AC:**
-  - Typed config resources persisted in the store.
-  - YAML bootstrap with a strict schema: unknown keys and errors are reported with line numbers.
-  - Seed-once semantics: create missing resources, never modify existing ones.
-  - After a full success, write `bootstrap-report.json` and delete the file. On partial failure, keep it.
-  - JSON Schema is generated from the Go types.
-- **V:**
-  - Golden tests for the report.
-  - Tests for partial failure and for a read-only file.
+### Task 0.5: Config model and seed-once bootstrap
+- [ ] **AC (core-bootstrap-api AC1):**
+  - Typed resources.
+  - Strict YAML with line and column errors.
+  - Seed once; delete the file after success, keep it on partial failure.
+  - Secret-free report.
+  - JSON Schema generated.
+- **V:** golden tests for the report, partial failure and a read-only file.
 - **Dep:** 0.3.
+- **Files:** `crates/core/src/config/*.rs`.
 - **Size:** M.
 
-### Task 0.6: HTTP server, REST conventions, auth
-- [ ] **AC:**
-  - `/api/v1` router.
-  - RFC 9457 errors.
-  - Admin API keys stored hashed (`Bearer`), and a read-only scope.
-  - Secrets are write-only (`{"set":true}`).
-  - Request body limits.
-  - `/health`.
-  - OpenAPI document served.
-- **V:**
-  - API tests for auth (missing, invalid, valid key, scopes) and for secret redaction.
+### Task 0.6: HTTP server, auth and secrets
+- [ ] **AC (core AC6, AC7):**
+  - `/api/v1`, RFC 9457 errors, body limits, `/health`, OpenAPI.
+  - API keys (admin, read-only).
+  - Argon2 admin user, login rate limit.
+  - Encrypted secrets with full re-encryption on key rotation.
+  - Secrets never echoed.
+- **V:** auth matrix tests; a seeded-secret grep over logs and responses.
 - **Dep:** 0.5.
+- **Files:** `crates/core/src/{api,auth,secrets}/*.rs`.
 - **Size:** M.
 
 ### Task 0.7: Resource CRUD and `POST /apply`
-- [ ] **AC:**
-  - `GET`/`PUT`/`PATCH`/`DELETE` by name for every resource kind.
-  - `POST /apply?mode=seed|upsert&dry_run`, returning per-resource results and a diff.
+- [ ] **AC (core-bootstrap-api AC2, AC3):**
+  - `PUT`/`PATCH`/`DELETE` by name.
+  - `apply` with `seed`/`upsert` and `dry_run`.
   - Changes notify the supervisor.
-- **V:**
-  - Idempotency tests: applying the same document twice leaves everything unchanged.
-  - A dry run makes no writes.
+- **V:** idempotency tests; a dry run makes no writes.
 - **Dep:** 0.6, 0.4.
+- **Files:** `crates/core/src/api/resources.rs`, `crates/api-types/src/*.rs`.
 - **Size:** M.
 
 ### Task 0.8: Observability
-- [ ] **AC:**
-  - slog with a level per component, and token redaction.
-  - Prometheus `/metrics`.
-  - An SSE `/api/v1/events` broker that sends keepalives and drops slow consumers safely, without blocking producers.
-- **V:**
-  - Tests: the SSE broker never blocks a publisher; redaction covers tokens in URLs and headers.
+- [ ] **AC (core AC7, AC8):**
+  - `tracing` with a level per component.
+  - `secrecy`-typed secrets.
+  - `/metrics`.
+  - An SSE broker that never blocks a publisher.
+  - Idle RSS ≤ 64 MB and CPU ≤ 1 %.
+- **V:** broker back-pressure test; an idle soak measured under a cap.
 - **Dep:** 0.6.
+- **Files:** `crates/core/src/{obs,events}/*.rs`.
 - **Size:** S.
 
 ### Task 0.9: UI shell (Leptos)
-- [ ] **AC:**
-  - Leptos CSR app built with trunk, with `wasm-opt -Oz` enabled. The `dist/` is embedded in the binary with rust-embed.
-  - A shared API-types crate is used by both the backend and the UI.
-  - Login with session cookie, CSRF protection and a rate limit.
-  - Layout and navigation, a live-event client, and an API client generated from OpenAPI.
-- **V:** Playwright end-to-end test: log in and see the empty dashboard. The test runs in CI.
+- [ ] **AC (core AC9, core-bootstrap-api AC4):**
+  - CSR app built with trunk and `wasm-opt -Oz`, embedded with rust-embed.
+  - Login, navigation, live event client, API client from `api-types`.
+- **V:** Playwright login test; zero serious or critical axe violations; WASM within budget.
 - **Dep:** 0.6, 0.8.
+- **Files:** `crates/ui/src/*.rs`, `crates/autoplow/src/embed.rs`, `e2e/login.spec.ts`.
 - **Size:** M.
 
-### Checkpoint: Foundation
-- [ ] The tests above pass.
-- [ ] A bootstrap file seeds an admin user and an API key.
-- [ ] `apply` works.
-- [ ] The UI logs in.
+### Checkpoint: core
+- [ ] Bootstrap seeds an admin user and an API key; `apply` is idempotent; the UI logs in.
+- [ ] All gates pass.
 - [ ] Human review.
 
-## Phase 1: Scan pipeline, core slice (manual → Plex)
+## Phase 1: `notifications`
 
-### Task 1.1: Per-target durable scan queue
-- [ ] **AC:**
-  - Table keyed on (target, folder), with a generation counter.
-  - A unique pending index plus upsert.
-  - Child entries are absorbed into a queued parent.
-  - Readiness = the trigger's minimum age plus extra wait for the event type, capped by the target's maximum wait.
-  - FIFO by ready time.
-  - Generation-based acknowledgement: an event arriving after dispatch always causes another scan.
-- **V:**
-  - Fake-clock tests covering every rule above, including "event during dispatch" and "event after a fast scan".
-- **Dep:** 0.2, 0.3.
+### Task 1.1: Outbox and dispatcher
+- [ ] **AC (notifications AC1–AC3):**
+  - Transactional outbox.
+  - Aggregation window.
+  - Backoff honouring `Retry-After` and Discord limits.
+  - Dead-letter.
+- **V:** crash-and-restart durability test with a paused clock.
+- **Dep:** 0.3, 0.4.
+- **Files:** `crates/notifications/src/{outbox,dispatch}.rs`.
 - **Size:** M.
 
-### Task 1.2: Target worker framework
-- [ ] **AC:**
-  - One worker per target, isolated.
-  - Error classes: retry, back off the target (honouring `Retry-After`), or per-path dead-letter.
-  - A worker never dies on one path.
-  - Batching hook.
-  - Every queue entry exposes its wait reason.
-- **V:** fake-target tests: an offline target doesn't block the others; a 400 dead-letters one path only.
-- **Dep:** 1.1, 0.4.
+### Task 1.2: Channels, subscriptions and UI
+- [ ] **AC (notifications AC4):**
+  - Discord, Apprise and webhook channels.
+  - Subscriptions per event type.
+  - UI page.
+- **V:** fake-endpoint tests; Playwright plus axe.
+- **Dep:** 1.1, 0.9.
+- **Files:** `crates/notifications/src/channels/*.rs`, `crates/ui/src/pages/notifications.rs`.
 - **Size:** M.
 
-### Task 1.3: Library resolver
-- [ ] **AC:**
-  - Library list per target, refreshed periodically and whenever a lookup misses.
-  - Resolution returns every library whose location contains the folder, by components.
-  - Root scans rejected by default (per-target setting).
-  - "Unmatched" is reported, never silently dropped.
-- **V:** tests including the same location in two libraries.
-- **Dep:** 0.2.
-- **Size:** S.
+### Checkpoint: notifications
+- [ ] A failure event reaches Discord, Apprise and webhook fakes once, after a restart in between; human review.
 
-### Task 1.4: Plex target (scan)
-- [ ] **AC:**
-  - `refresh?path=` per folder per library.
-  - Paging headers on every request.
-  - Version check and token handling.
-- **V:**
-  - Fake Plex tests.
-  - `live` test: new episode visible in about 1 s, matching the earlier results.
-- **Dep:** 1.2, 1.3.
-- **Size:** S.
+## Phase 2: `targets`
 
-### Task 1.5: Manual scan API, preview and UI
-- [ ] **AC:**
-  - `POST /api/v1/scans`, where `dry_run` returns the rewrite, library and existence per target.
-  - Queue view and retry over the API.
-  - UI pages for manual add with preview, plus queues.
-- **V:** API tests; UI end-to-end test of preview and queueing.
-- **Dep:** 1.4, 0.9.
+### Task 2.1: Shared HTTP client and library resolver
+- [ ] **AC (targets AC2–AC4; scan AC8, the containment part):**
+  - Timeouts, 4 MB response cap, `Retry-After`, error taxonomy.
+  - Token redaction in URLs.
+  - Library cache refreshed periodically and on a miss.
+  - Component-based containment, multi-library resolution.
+- **V:** unit tests and recorded fixtures.
+- **Dep:** 0.2, 0.6.
+- **Files:** `crates/targets/src/{http,libraries}.rs`.
 - **Size:** M.
 
-### Checkpoint: Core slice
-- [ ] A manual scan reaches Plex end to end, live.
-- [ ] Queues survive a restart.
-- [ ] A config edit to the target takes effect without a restart.
-- [ ] Human review.
-
-## Phase 2: Scan pipeline, breadth
-
-### Task 2.1: Trigger framework and auth
-- [ ] **AC:**
-  - Trigger resources with:
-    - per-instance or global credentials
-    - header, basic and query auth (any one passes)
-    - include/exclude filters
-    - target excludes
-    - minimum age and extra wait per event type
-  - Unknown events return 2xx.
-- **V:** auth matrix tests.
-- **Dep:** 1.1, 0.7.
-- **Size:** M.
-
-### Task 2.2: Sonarr and Whisparr v2 parser
-- [ ] **AC:**
-  - Download events, per file and the ImportComplete shape, deduplicated by `downloadId` and folder.
-  - Rename: old and new folders.
-  - EpisodeFileDelete and SeriesDelete skip the existence check.
-  - Test events queue nothing.
-- **V:** golden payload tests taken from the source shapes in `docs/research/arr-connect-api.md`.
+### Task 2.2: Plex client
+- [ ] **AC (targets AC1):**
+  - Sections with paging headers.
+  - `refresh?path=`.
+  - Sessions websocket, non-blocking reader.
+  - Section state for verified empty trash.
+- **V:** fixture contract tests; `live` test reproduces the platform-notes timings.
 - **Dep:** 2.1.
-- **Size:** S.
-
-### Task 2.3: Radarr and Whisparr v3 parser
-- [ ] **AC:** Download, Rename, MovieFileDelete and MovieDelete (scan the folder, no existence check). Test events.
-- **V:** golden tests.
-- **Dep:** 2.1.
-- **Size:** S.
-
-### Task 2.4: Lidarr parser
-- [ ] **AC:** Download (`trackFiles[]`), Rename, Retag, ArtistDelete, AlbumDelete. The Test payload carries `albums`.
-- **V:** golden tests.
-- **Dep:** 2.1.
-- **Size:** S.
-
-### Task 2.5: Legacy, Bazarr and generic triggers
-- [ ] **AC:**
-  - autoscan `/triggers/{sonarr,radarr,lidarr,manual}` and A-Train as adapters.
-  - Bazarr `GET /triggers/bazarr?path=`.
-  - `GET /stats` returns 200, and `/api/config-template` returns our snippet.
-  - Generic `{paths:[]}`.
-- **V:** compatibility tests against recorded autoscan, A-Train and Bazarr requests.
-- **Dep:** 2.1.
+- **Files:** `crates/targets/src/plex/*.rs`.
 - **Size:** M.
 
-### Task 2.6: Jellyfin and Emby targets
-- [ ] **AC:**
+### Task 2.3: Jellyfin and Emby clients
+- [ ] **AC (targets AC1, AC6):**
   - Batched `Media/Updated` (Modified for Jellyfin, Created for Emby).
   - Library listing.
-  - Emby's library-delete-by-Id quirk handled wherever relevant.
-  - The UI notes the monitor delay.
-  - Warning for overlapping library locations.
-- **V:** fake-server tests; `live` test confirming about 60 s and about 90 s.
-- **Dep:** 1.2, 1.3.
+  - Sessions websocket.
+  - Overlap warning.
+  - Emby delete-by-Id quirk in the test helpers.
+- **V:** fixtures; `live` test confirms about 60 s and 90 s.
+- **Dep:** 2.1.
+- **Files:** `crates/targets/src/{jellyfin,emby,mediabrowser}.rs`.
 - **Size:** M.
 
-### Task 2.7: Tdarr and Autoplow targets
-- [ ] **AC:**
+### Task 2.4: Tdarr, Autoplow and Tofa (provisional) clients
+- [ ] **AC (targets AC1, AC5):**
   - Tdarr `scan-files`.
-  - Autoplow target posts to another instance's generic trigger.
-  - Target excludes prevent loops.
-- **V:** fake-server tests.
-- **Dep:** 1.2.
-- **Size:** S.
-
-### Task 2.8: Anchors, "path must exist", empty trash
-- [ ] **AC:**
-  - Anchors bound at any scope; all applicable anchors must exist; deletes are blocked when any is missing.
-  - Optional existence check with retry and a timeout warning; deletes are exempt.
-  - Plex verified empty trash: observe `refreshing`/`scannedAt`, skip if the scan failed, wait only in the Plex worker.
-- **V:**
-  - Fake-clock and fake-Plex tests.
-  - `live` test of late visibility on Plex: passes with the check, fails without it.
-- **Dep:** 1.4, 2.6.
+  - Autoplow generic trigger.
+  - Tofa scoped scan and session polling, behind a capability flag.
+- **V:** fixtures.
+- **Dep:** 2.1.
+- **Files:** `crates/targets/src/{tdarr,autoplow,tofa}.rs`.
 - **Size:** M.
 
-### Task 2.9: Post-delivery verification (optional per target)
-- [ ] **AC:**
-  - Query whether the expected path is present or absent within the server's delay plus a margin.
-  - On failure, warn with a hint such as "library not registered".
-- **V:** fake tests that reproduce the Jellyfin empty-folder and Plex disrupted-scan cases.
-- **Dep:** 2.6.
-- **Size:** S.
+### Checkpoint: targets
+- [ ] All clients pass contract tests; `live` timings match the platform notes; human review.
 
-### Task 2.10: UI for triggers and targets
-- [ ] **AC:**
-  - CRUD pages for triggers and targets.
-  - Credential display, with copy for webhook URLs.
-  - Rewrite rule editor with a filesystem picker: Arr filesystem API, Emby/Jellyfin directory listing, local browser.
-  - Health and warnings.
-- **V:** UI end-to-end tests.
-- **Dep:** 2.1–2.9, 0.9.
-- **Size:** M. Split per page if it grows.
-
-### Checkpoint: Scanning complete
-- [ ] Every trigger and target works against fakes.
-- [ ] The `live` matrix matches the earlier results.
-- [ ] Human review.
-
-## Phase 3: Arr connection manager
+## Phase 3: `arr`
 
 ### Task 3.1: Arr client and detection
-- [ ] **AC:**
-  - `system/status` detects app, version and urlBase, and selects the API flavour (v3, v1; v5-ready).
+- [ ] **AC (arr AC1):**
+  - `system/status` detection of Sonarr v4/v5, Radarr, Lidarr, Whisparr v2/v3 and urlBase.
   - Root folders.
-  - Filesystem API proxy for the picker.
-- **V:** fake Arr tests per flavour.
-- **Dep:** 0.7.
+  - Filesystem API proxy for the path picker.
+- **V:** fixtures per flavour.
+- **Dep:** 0.6.
+- **Files:** `crates/arr/src/{client,detect}.rs`.
 - **Size:** S.
 
-### Task 3.2: Managed connection reconciler
-- [ ] **AC:**
-  - The desired resource is built from the Arr's own schema, named `Autoplow (Managed)`, with a header token, a fingerprint header, `tags: []` and the fixed event set.
+### Task 3.2: Webhook receiver and parsers
+- [ ] **AC (arr AC5):**
+  - Sonarr/Whisparr v2 parser: both `Download` shapes, deduplicated by `downloadId`.
+  - Radarr/Whisparr v3 parser.
+  - Lidarr parser, including the `albums` Test payload.
+  - Unknown events return 2xx.
+- **V:** golden payload tests from `docs/research/arr-connect-api.md`.
+- **Dep:** 3.1.
+- **Files:** `crates/arr/src/{receiver,sonarr,radarr,lidarr}.rs`.
+- **Size:** M.
+
+### Task 3.3: Managed connection reconciler
+- [ ] **AC (arr AC2–AC4):**
+  - Desired definition built from the Arr's own schema, with header token, fingerprint header and `tags: []`.
   - Create only when the receiver is ready.
-  - Detect drift and repair with a **full PUT, only when drift exists** (Lidarr re-tests on every PUT).
-  - Re-create when missing.
-  - Unmanage and delete from our UI.
-  - Drift notifications.
-- **V:**
-  - Fake Arr tests.
-  - `live` test of the full create, drift, repair and delete cycle (see `docs/platform-notes/arr.md`).
-- **Dep:** 3.1, 2.1.
+  - Detect drift and repair with a full PUT only when drift exists.
+  - Never touch connections we don't own.
+- **V:** fake Arr; `live` create, drift, repair and delete cycle (`docs/platform-notes/arr.md`).
+- **Dep:** 3.2, 1.1.
+- **Files:** `crates/arr/src/managed.rs`.
 - **Size:** M.
 
-### Task 3.3: Migration helper and evidence-based mapping suggestions
-- [ ] **AC:**
-  - List old autoscan, autopulse and autoplow webhooks, and offer to disable or delete them after our connection is verified.
-  - Path-mapping suggestions derived from the same file seen by the Arr and by the server (several samples, checked on local disk).
-- **V:** fake tests; a `live` dry run.
-- **Dep:** 3.2, 1.3.
+### Task 3.4: Migration helper and evidence-based mapping suggestions
+- [ ] **AC (arr AC4; scan path-mapping requirements):**
+  - List autoscan-style hooks and offer removal after our connection is verified.
+  - Suggest path mappings derived from the same file seen by both sides.
+- **V:** fixtures; `live` dry run.
+- **Dep:** 3.3, 2.1.
+- **Files:** `crates/arr/src/{migrate,suggest}.rs`.
 - **Size:** M.
 
-### Checkpoint: Arr integration
-- [ ] A real Sonarr or Radarr is configured end to end through the API and UI.
-- [ ] Human review.
+### Checkpoint: arr
+- [ ] A real Sonarr and Radarr get a managed connection, survive simulated drift, and their Test events parse; human review.
 
-## Phase 4: Uploads
+## Phase 4: `scan`
 
-### Task 4.1: rclone transport (supervised `rcd`)
-- [ ] **AC:**
-  - Start `rclone rcd` on a unix socket in a 0700 directory, with an explicit `--config` pointing at the user's rclone.conf.
-  - Health check (`rc/noop`) and restart with backoff.
-  - After a child crash, re-queue unfinished uploads from our database: job state does not survive a restart.
-  - Job and group management, completion by polling, stats-group cleanup.
-  - Check the rclone version (minimum supported).
-  - Cap the child's memory where possible.
-- **V:**
-  - Tests against local and crypt, porting the spike checks: move, batch, filters, bwlimit, cancel.
-  - `kill -9` of rcd mid-transfer leads to a restart and re-queue, and the upload completes.
-  - The host's graceful SIGTERM shutdown is unaffected by rclone's atexit hook.
-- **Dep:** 0.4.
+### Task 4.1: Per-target durable queue
+- [ ] **AC (scan AC2, AC3, AC5):**
+  - Generation acknowledgement.
+  - Unique pending index with upsert.
+  - Parent absorbs children.
+  - Readiness: minimum age (30 s) and maximum wait (10 min).
+  - FIFO by ready time.
+  - Wait reasons.
+- **V:** paused-clock tests: event during dispatch, event after a fast scan, parent and child.
+- **Dep:** 0.3, 0.2.
+- **Files:** `crates/scan/src/queue/*.rs`.
 - **Size:** M.
 
-### Task 4.2: Destinations and the per-file upload queue
-- [ ] **AC:**
-  - Destination resources.
-  - Durable upload queue keyed by file identity (dev, ino) plus path.
-  - Batch submission with one group per job.
-  - Tracking by job and identity, never by basename.
-  - Retries with backoff; the source is never removed on failure.
-- **V:**
-  - Duplicate-basename test.
-  - Crash-recovery test.
-- **Dep:** 4.1, 0.3.
+### Task 4.2: Target workers and delivery
+- [ ] **AC (scan AC4, AC9):**
+  - One isolated worker per target.
+  - Backoff that honours `Retry-After`.
+  - Per-path dead-letter.
+  - Batching (Jellyfin/Emby), one request per folder (Plex).
+- **V:** an offline fake target doesn't block the others; a 400 dead-letters one path only.
+- **Dep:** 4.1, 2.2, 2.3.
+- **Files:** `crates/scan/src/worker.rs`.
 - **Size:** M.
 
-### Task 4.3: Readiness: age, stability, mtime hygiene, hardlinks
-- [ ] **AC:**
-  - First-seen age that restarts when mtime changes.
-  - Size and stability checks.
-  - Detection of future or bogus mtimes, with an opt-in fix (never on hardlinks, never when Change File Date is in use) or a warning with source-setting hints.
-  - Hardlink policy per destination.
-  - "Scanned first" gate.
-- **V:** fake-clock and filesystem tests.
-- **Dep:** 4.2, 1.1.
+### Task 4.3: Trigger framework and auth
+- [ ] **AC (scan AC1, plus spec "Common to all triggers"):**
+  - Per-instance or global credentials.
+  - Header, basic or query auth (any one passes).
+  - Filters, target excludes, extra wait per event type.
+- **V:** auth matrix and filter tests.
+- **Dep:** 4.1, 0.7.
+- **Files:** `crates/scan/src/triggers/{mod,auth}.rs`.
 - **Size:** M.
 
-### Task 4.4: Open-file detection (optional)
-- [ ] **AC:**
-  - Capability detection (`pid: host`, `SYS_PTRACE`).
-  - `/proc` fd scan matched by dev+inode for both the local and the mergerfs identity.
-  - Write-mode and lock detection.
-  - Process and container identification.
-  - Optional "wait while a media server has the file open".
-  - Escape hatch for long-held read-write handles.
-  - Degraded-mode notice when the capability is missing.
-- **V:**
-  - Tests with helper processes holding files open in read and write modes, and a flock.
-  - Container-attribution test from cgroup fixtures.
+### Task 4.4: Arr trigger wiring, manual scan API with preview, queue UI
+- [ ] **AC (scan AC1, AC5):**
+  - Arr events produce folder scans.
+  - `POST /scans` with `dry_run` preview (rewrite, library, existence).
+  - Queue pages with wait reasons.
+- **V:** API tests; Playwright plus axe.
+- **Dep:** 4.2, 4.3, 3.2.
+- **Files:** `crates/scan/src/triggers/arr.rs`, `crates/scan/src/api.rs`, `crates/ui/src/pages/queues.rs`.
+- **Size:** M.
+
+### Task 4.5: Legacy, Bazarr and generic triggers
+- [ ] **AC (scan AC12):**
+  - autoscan `/triggers/*` and A-Train.
+  - Bazarr: `/triggers/bazarr`, `/stats`, `/api/config-template`.
+  - Generic `{paths:[]}`.
+- **V:** recorded request fixtures from each tool.
 - **Dep:** 4.3.
+- **Files:** `crates/scan/src/triggers/{legacy,bazarr,generic}.rs`.
 - **Size:** M.
 
-### Task 4.5: Concurrency, failover, schedules
-- [ ] **AC:**
-  - Global transfer cap plus optional per-remote caps.
-  - Remote health with cooldown on repeated or quota failures; route to the next remote.
-  - Schedule windows that let transfers in flight finish.
-- **V:** fake-transport tests.
+### Task 4.6: Anchors, "path must exist", verified Plex empty trash
+- [ ] **AC (scan AC6, AC7, Plex trash row):**
+  - Anchors at any scope; all applicable anchors required.
+  - Hold-and-retry existence check; deletes exempt.
+  - Empty trash only after the scan is observed to complete.
+- **V:** paused-clock tests; `live` late-visibility test on Plex passes with the check and fails without it.
 - **Dep:** 4.2.
+- **Files:** `crates/scan/src/{anchors,exists,trash}.rs`.
 - **Size:** M.
 
-### Task 4.6: Downloader pausing
-- [ ] **AC:**
-  - SABnzbd and NZBGet clients.
-  - "While uploading" with a grace period, and a disk-space guard.
-  - Guaranteed resume on error, on shutdown and by a periodic reconcile.
-- **V:** fake downloader tests, including a simulated crash.
-- **Dep:** 4.5.
+### Task 4.7: Post-delivery verification
+- [ ] **AC (scan AC11):**
+  - Optional per target.
+  - Server delay plus margin.
+  - Warning with hints.
+- **V:** fakes reproducing the Jellyfin empty-folder and Plex disrupted-scan cases.
+- **Dep:** 4.2.
+- **Files:** `crates/scan/src/verify.rs`.
 - **Size:** S.
 
-### Task 4.7: Upload UI
-- [ ] **AC:** destinations, queue with readiness reasons, active transfers with live speed, history, remote health.
-- **V:** UI end-to-end test.
-- **Dep:** 4.1–4.6.
-- **Size:** M.
-
-### Checkpoint: Uploads
-- [ ] A capped `live` upload of test files to a crypt remote on the host.
-- [ ] Readiness verified with a hardlinked file and an open file.
-- [ ] Human review.
-
-## Phase 5: Throttle
-
-### Task 5.1: Session sources and registry
-- [ ] **AC:**
-  - Plex websocket, Jellyfin/Emby websocket, and Tofa (polling until its websocket is documented).
-  - Every source counted once.
-  - Stale-session expiry.
-  - Websocket readers never block.
-- **V:** fake websocket tests.
-- **Dep:** 1.4, 2.6.
-- **Size:** M.
-
-### Task 5.2: Policy modes and effect
-- [ ] **AC:**
-  - Modes: tiers, per stream, and by bitrate with clamping.
-  - Exclude paused sessions, and LAN sessions optionally.
-  - Optional "no new transfers above N streams".
-  - Apply through `core/bwlimit`.
-- **V:** table tests, including the 10 Gbps Plex outlier.
-- **Dep:** 5.1, 4.1.
-- **Size:** S.
-
-### Checkpoint: Throttle
-- [ ] Live: a Plex stream changes the limit on a running test transfer.
-
-## Phase 6: Notifications
-
-### Task 6.1: Outbox and dispatcher
-- [ ] **AC:**
-  - Outbox written in the same transaction as the state change.
-  - Aggregation per (target, event type).
-  - Backoff that honours `Retry-After` and Discord limits.
-  - Dead-letter and retention.
-- **V:** fake-clock tests; restart durability.
-- **Dep:** 0.3.
-- **Size:** M.
-
-### Task 6.2: Channels, subscriptions, UI
-- [ ] **AC:**
-  - Discord, Apprise and generic webhook channels.
-  - Subscriptions per event type.
-  - Event types from Phases 2–5 wired in.
-  - UI.
-- **V:** fake endpoint tests; UI end-to-end test.
-- **Dep:** 6.1.
-- **Size:** M.
-
-## Phase 7: Local filesystem and Google Drive triggers
-
-### Task 7.1: Local filesystem trigger
-- [ ] **AC:**
+### Task 4.8: Local filesystem trigger
+- [ ] **AC (scan triggers table):**
   - inotify, walk or both per path.
-  - The walk snapshot is stored in the database (new, changed and deleted files).
+  - The walk snapshot is persisted (new, changed and deleted files).
   - Overflow handling.
   - Rebuilt on restart.
-- **V:** tests on temp trees, including an overflow simulation.
-- **Dep:** 2.1.
+- **V:** temp-tree tests including overflow.
+- **Dep:** 4.3.
+- **Files:** `crates/scan/src/triggers/fs/*.rs`.
 - **Size:** M.
 
-### Task 7.2: Google Drive OAuth and accounts
-- [ ] **AC:**
-  - The user's own web OAuth client.
-  - Connect and callback with state.
-  - Encrypted tokens, included in key rotation.
-  - Health on revocation.
-- **V:** fake OAuth server tests.
-- **Dep:** 0.6.
+### Task 4.9: Trigger and target UI with path picker
+- [ ] **AC (scan path rules; targets AC6):**
+  - CRUD pages for triggers and targets.
+  - Webhook URL and credential copy.
+  - Rewrite editor with a filesystem picker per side.
+  - Target warnings.
+- **V:** Playwright plus axe; WASM budget.
+- **Dep:** 4.4, 3.1, 0.9.
+- **Files:** `crates/ui/src/pages/{triggers,targets,paths}.rs`.
 - **Size:** M.
 
-### Task 7.3: Drive monitors
-- [ ] **AC:**
-  - Snapshot plus the Changes API.
-  - Old and new paths through the tree.
-  - Events committed before the page token is saved.
-  - Re-snapshot when the token is invalid.
-  - Rate limits.
-  - Minimum age defaults above the mount's poll interval.
-- **V:** fake Drive API tests: replay after a crash, token loss.
-- **Dep:** 7.2, 2.1.
-- **Size:** M.
-
-## Phase 8: Library parity
-
-### Task 8.1: Engine
-- [ ] **AC:**
-  - Phased fetch: Arr items, server items, path-keyed join.
-  - Findings: ID mismatches, gaps both ways, file mismatches, merged items.
-  - Items on unknown agents are reported, never modified.
-  - Ignore list.
-- **V:** fixture tests per server type.
-- **Dep:** 3.1, 1.3.
-- **Size:** M.
-
-### Task 8.2: Fixing and triggers
-- [ ] **AC:**
-  - Review by default; auto-fix opt-in per server.
-  - Plex match, Emby/Jellyfin provider-ID-only update, Tofa match.
-  - Verified read-back and an audit log.
-  - Merged items: off, notify, or auto-split.
-  - Schedule, on demand and after import, each switchable on or off.
-- **V:** fake-server tests; a `live` dry run against the test libraries.
-- **Dep:** 8.1, 6.2.
-- **Size:** M.
-
-### Task 8.3: Parity UI
-- [ ] **AC:** runs, findings (fix, skip, ignore), filters, audit log.
-- **V:** UI end-to-end test.
-- **Dep:** 8.2.
-- **Size:** M.
-
-## Phase 9: Track preferences (Plex)
-
-### Task 9.1: Matching algorithm port
-- [ ] **AC:** PAL's audio and subtitle scoring, forced/HI semantics and tie-break, with the known bugs fixed.
-- **V:** port of PAL's tests plus new cases.
-- **Dep:** none (pure).
+### Task 4.10: Scan load test
+- [ ] **AC (scan AC10; project scale):**
+  - 1 000 events per minute for 10 minutes: no loss, back-pressure 503s only.
+  - Resource budget held.
+- **V:** load-test harness under a cap; results summarised (no environment details).
+- **Dep:** 4.2, 4.3.
+- **Files:** `crates/scan/tests/load.rs`.
 - **Size:** S.
 
-### Task 9.2: Users, preferences, triggers, apply
-- [ ] **AC:**
-  - Shared-server user tokens, never logged.
-  - Preference store per (user, show).
-  - Play, new-episode and sweep triggers, each switchable on or off.
-  - Keyed queue per (user, show).
-  - Verified writes.
-  - Opt-out per user.
-- **V:** fake Plex tests; a `live` test on the test library.
-- **Dep:** 9.1, 5.1.
-- **Size:** M.
-
-### Task 9.3: Track preferences UI
-- [ ] **AC:** users, preferences (edit and clear), scope settings, history.
-- **V:** UI end-to-end test.
-- **Dep:** 9.2.
-- **Size:** S.
-
-## Phase 10: Packaging
-
-### Task 10.1: Container and release
-- [ ] **AC:**
-  - Static musl binary; distroless or Alpine image that includes a pinned rclone.
-  - `RCLONE_CONFIG` set.
-  - Documented optional `pid: host` and `SYS_PTRACE`.
-  - Healthcheck.
-  - Release pipeline: cargo-zigbuild, multi-arch image.
-- **V:** image runs and boots from the bootstrap file on a clean volume.
-- **Dep:** all phases.
-- **Size:** S.
-
-### Task 10.2: Saltbox integration notes and migration guide
-- [ ] **AC:**
-  - Example bootstrap templated by the role.
-  - Migration from autoscan, autopulse, cloudplow and old autoplow, including the webhook migration helper.
-- **V:** dry-run walkthrough on a test Saltbox install.
-- **Dep:** 10.1.
-- **Size:** S.
-
-### Checkpoint: Release candidate
-- [ ] Every acceptance criterion is met.
-- [ ] The live matrix passes.
+### Checkpoint: scan
+- [ ] A real Sonarr/Radarr feeds Plex, Jellyfin and Emby end to end through managed connections.
+- [ ] Load test passes.
 - [ ] Human review.
 
-## Repository conventions (added during first-commit setup)
-- [ ] **Task 0.1 addendum: constraints tooling.** Install and wire every tool in `CONSTRAINTS.md` (cargo-nextest, cargo-llvm-cov + diff-cover, cargo-mutants + `scripts/check-mutants.sh`, cargo-deny + `deny.toml`, cargo-machete, gitleaks, trunk + `scripts/check-wasm-budget.sh`, Playwright + `@axe-core/playwright`). Add a `scripts/check-task.sh` that runs the full set (no time budget), add the Rust CI workflow, and record the project-coverage baseline.
-  - **V:** a trial run on the branch passes. The floor guard catches a planted `#[allow]`, `todo!()` and `#[ignore]`.
-- [ ] **Task 0.1 addendum: release-please.** Add the release-please workflow (`release-type: rust`) once `Cargo.toml` exists. Releases and the CHANGELOG are generated from Conventional Commits; tags are `vX.Y.Z` (0.x until stable). Until the first release, commits go straight to `main`; switch to PRs with required checks afterwards.
+## Phase 5: `gdrive`
+
+### Task 5.1: Google accounts (OAuth web flow)
+- [ ] **AC (gdrive AC1):**
+  - The user's own OAuth web client.
+  - Connect and callback with state.
+  - Encrypted tokens, included in rotation.
+  - Health on revocation.
+- **V:** fake OAuth server.
+- **Dep:** 0.6.
+- **Files:** `crates/gdrive/src/{oauth,accounts}.rs`.
+- **Size:** M.
+
+### Task 5.2: Drive monitors
+- [ ] **AC (gdrive AC2–AC5):**
+  - Snapshot plus Changes API.
+  - Old and new paths.
+  - Events committed before the token is saved.
+  - Re-snapshot on an invalid token.
+  - Rate-limit backoff.
+- **V:** fake Drive API: crash replay, token loss.
+- **Dep:** 5.1, 4.3.
+- **Files:** `crates/gdrive/src/{snapshot,changes,trigger}.rs`.
+- **Size:** M.
+
+### Checkpoint: gdrive
+- [ ] A real Drive account connects from the UI, and a change produces a scan for the mapped folder; human review.
+
+## Phase 6: `rclone`
+
+### Task 6.1: Supervised `rcd` and RC client
+- [ ] **AC (rclone AC1–AC7):**
+  - Unix socket in a 0700 directory.
+  - Minimum version 1.75.
+  - Restart with "job state lost" reporting.
+  - Typed client and job/group tracking.
+  - Stats-group sweep.
+  - Bandwidth limit applied live.
+  - Host SIGTERM isolated from rclone's hook.
+- **V:** integration tests with crypt over local; `kill -9` the child; 24-hour soak (group count bounded).
+- **Dep:** 0.4.
+- **Files:** `crates/rclone/src/{child,client,jobs}.rs`.
+- **Size:** M.
+
+### Checkpoint: rclone
+- [ ] The `rcd` child survives `kill -9` and recovers; bandwidth changes apply live; human review.
+
+## Phase 7: `upload`
+
+### Task 7.1: Destinations and per-file queue
+- [ ] **AC (upload AC4–AC6):**
+  - Queue keyed by identity (dev, ino) plus path.
+  - Tracking by job and group.
+  - Source removed only after success.
+  - Re-queue after a child crash.
+- **V:** duplicate-basename and crash-recovery tests.
+- **Dep:** 6.1, 0.3.
+- **Files:** `crates/upload/src/{destinations,queue}.rs`.
+- **Size:** M.
+
+### Task 7.2: Readiness: age, stability, mtime hygiene, hardlinks, scanned-first
+- [ ] **AC (upload AC1, AC9):**
+  - First-seen age (2 min) that restarts on an mtime change.
+  - Two stability checks 30 s apart.
+  - Future-mtime warning, or the opt-in fix.
+  - Hardlink policy.
+  - Scanned-first gate.
+- **V:** paused-clock and filesystem tests.
+- **Dep:** 7.1, 4.1.
+- **Files:** `crates/upload/src/readiness/*.rs`.
+- **Size:** M.
+
+### Task 7.3: Open-file detection (optional capability)
+- [ ] **AC (upload AC2, AC3):**
+  - Capability detection.
+  - `/proc` fd scan by dev+inode for local and mergerfs identities.
+  - Write mode and locks only.
+  - Process and container attribution.
+  - Media-server wait option.
+  - Degraded-mode notice.
+- **V:** helper processes holding read, write and flock handles; cgroup fixtures.
+- **Dep:** 7.2.
+- **Files:** `crates/upload/src/openfiles/*.rs`.
+- **Size:** M.
+
+### Task 7.4: Concurrency, failover, schedules
+- [ ] **AC (upload AC7, AC8):**
+  - Global cap plus per-remote caps.
+  - Remote-health cooldown.
+  - Schedule windows that let transfers in flight finish.
+- **V:** fake-transport tests.
+- **Dep:** 7.1.
+- **Files:** `crates/upload/src/{scheduler,health}.rs`.
+- **Size:** M.
+
+### Task 7.5: Downloader pausing
+- [ ] **AC (upload AC10):**
+  - SABnzbd and NZBGet.
+  - "While uploading" with grace, and a disk guard.
+  - Guaranteed resume, including after a crash.
+- **V:** fakes plus a simulated crash.
+- **Dep:** 7.4.
+- **Files:** `crates/upload/src/downloaders/*.rs`.
+- **Size:** S.
+
+### Task 7.6: Upload UI
+- [ ] **AC:** destinations, queue with readiness reasons, live transfers, history, remote health.
+- **V:** Playwright plus axe; WASM budget.
+- **Dep:** 7.1–7.5, 0.9.
+- **Files:** `crates/ui/src/pages/uploads/*.rs`.
+- **Size:** M.
+
+### Task 7.7: Upload soak and load test
+- [ ] **AC (upload AC11; project scale):** sustained throughput equivalent to 10 TB per day against a local/crypt test remote, within the resource budget.
+- **V:** capped soak; results summarised.
+- **Dep:** 7.4.
+- **Files:** `crates/upload/tests/soak.rs`.
+- **Size:** S.
+
+### Checkpoint: upload
+- [ ] Capped `live` upload to a crypt remote.
+- [ ] Hardlinked and open files handled.
+- [ ] Human review.
+
+## Phase 8: `throttle`
+
+### Task 8.1: Session registry
+- [ ] **AC (throttle AC1, AC2):**
+  - Plex, Jellyfin and Emby websockets, plus Tofa polling.
+  - Each server counted once.
+  - Paused sessions excluded; LAN optional.
+  - Stale expiry.
+- **V:** fake websocket tests.
+- **Dep:** 2.2, 2.3, 2.4.
+- **Files:** `crates/throttle/src/sessions.rs`.
+- **Size:** M.
+
+### Task 8.2: Policy modes and effect
+- [ ] **AC (throttle AC3–AC6):**
+  - Tiers, per stream, by bitrate (cap 200 Mbps plus media bitrate).
+  - Limit applied within 5 s.
+  - Optional "no new transfers above N streams".
+- **V:** table tests including the 10 Gbps outlier; integration test with `rcd`.
+- **Dep:** 8.1, 6.1.
+- **Files:** `crates/throttle/src/policy.rs`.
+- **Size:** S.
+
+### Checkpoint: throttle
+- [ ] A live Plex stream changes the limit on a running test transfer within 5 s; human review.
+
+## Phase 9: `parity`
+
+### Task 9.1: Engine
+- [ ] **AC (parity AC1, AC2, AC5):**
+  - Phased fetch and path-keyed join.
+  - Findings: mismatches, gaps both ways, file mismatches, merged items.
+  - Unknown agents reported, never modified.
+  - Ignore list.
+  - 500k-item run within budget.
+- **V:** fixtures per server; capped performance test.
+- **Dep:** 3.1, 2.1.
+- **Files:** `crates/parity/src/{fetch,compare,findings}.rs`.
+- **Size:** M.
+
+### Task 9.2: Fixes and triggers
+- [ ] **AC (parity AC3, AC4, AC6):**
+  - Review-first; auto-fix opt-in.
+  - Rate-limited fixes, verified by read-back, audited.
+  - Emby/Jellyfin fixes change provider IDs only.
+  - Merged items: off, notify or auto-split.
+  - Schedule, on-demand and after-import triggers, each switchable.
+- **V:** fakes; `live` dry run.
+- **Dep:** 9.1, 1.2.
+- **Files:** `crates/parity/src/{fix,triggers}.rs`.
+- **Size:** M.
+
+### Task 9.3: Parity UI
+- [ ] **AC:** runs, findings (fix, skip, ignore), filters, audit log.
+- **V:** Playwright plus axe.
+- **Dep:** 9.2, 0.9.
+- **Files:** `crates/ui/src/pages/parity.rs`.
+- **Size:** M.
+
+### Checkpoint: parity
+- [ ] A live dry run against the test libraries lists findings with no writes; an approved fix verifies by read-back; human review.
+
+## Phase 10: `track-preferences`
+
+### Task 10.1: Matching algorithm
+- [ ] **AC (track-preferences AC3):** PAL's scoring plus forced/HI/VI semantics and tie-break, with the fixed cases.
+- **V:** port of PAL's tests plus new cases.
+- **Dep:** none (pure).
+- **Files:** `crates/track-preferences/src/matching.rs`.
+- **Size:** S.
+
+### Task 10.2: Users, preferences, triggers, apply
+- [ ] **AC (track-preferences AC1, AC2, AC4, AC5):**
+  - Shared-server tokens, never logged.
+  - Preferences per (user, show).
+  - Play, new-episode and sweep triggers.
+  - Keyed serialisation.
+  - Verified writes.
+  - Opt-out per user.
+- **V:** fake Plex; `live` test on a test library.
+- **Dep:** 10.1, 2.2.
+- **Files:** `crates/track-preferences/src/{users,prefs,apply}.rs`.
+- **Size:** M.
+
+### Task 10.3: Track preferences UI
+- [ ] **AC:** users, preferences (edit and clear), scope settings, history.
+- **V:** Playwright plus axe.
+- **Dep:** 10.2, 0.9.
+- **Files:** `crates/ui/src/pages/tracks.rs`.
+- **Size:** S.
+
+### Checkpoint: track-preferences
+- [ ] A track change during live Plex playback propagates to the next episodes for that user only; human review.
+
+## Phase 11: Release
+
+### Task 11.1: Container image and release pipeline
+- [ ] **AC:**
+  - Static musl binaries for x86_64 and aarch64.
+  - Image with a pinned rclone and `RCLONE_CONFIG` set.
+  - Optional `pid: host` and `SYS_PTRACE` documented.
+  - Healthcheck.
+  - release-please releases.
+- **V:** image boots from a bootstrap file on a clean volume.
+- **Dep:** all phases.
+- **Files:** `Dockerfile`, `.github/workflows/release.yml`.
+- **Size:** S.
+
+### Task 11.2: Replacement checklists and Saltbox integration notes
+- [ ] **AC (project success criterion 3):**
+  - A written checklist per replaced tool (autoscan/autopulse, cloudplow, matcharr, Plex-Auto-Languages), each verified by the live suite.
+  - Example bootstrap for the Saltbox role.
+- **V:** walkthrough on a test Saltbox install.
+- **Dep:** 11.1.
+- **Files:** `docs/guides/*.md`.
+- **Size:** S.
+
+### Checkpoint: release candidate
+- [ ] Every module's acceptance criteria are met.
+- [ ] Project scale targets are verified.
+- [ ] The `CONSTRAINTS.md` gates are green.
+- [ ] Human review.
