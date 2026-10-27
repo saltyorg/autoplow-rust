@@ -1,5 +1,14 @@
 # Spec: the Google Drive trigger (v1)
 
+**Module:** `gdrive` · **Depends on:** core, scan · **Decisions:** ADR-0013 · **Status:** approved 2026-10-27
+
+## Objective
+Turn Google Drive changes (My Drive and shared drives) into scan events for the corresponding mounted paths, with a sign-in flow a user can complete from the UI.
+
+## Non-goals
+- Service accounts
+- Uploading through Drive APIs (uploads go through rclone)
+
 ## Connecting
 1. The user creates a Google Cloud OAuth client of type **Web application**. The UI includes a step-by-step guide with screenshots.
 2. They enter its client ID and secret in our UI. Each set is stored once as an encrypted "Google account" credential and can be reused.
@@ -50,3 +59,15 @@ Based on the bernard and autoplow designs.
 ## Not in v1
 - Service accounts.
 - Using tokens from `rclone.conf` (possible later).
+
+## Acceptance criteria
+1. A user with their own OAuth web client can connect an account from the UI; refresh tokens are stored encrypted and survive key rotation.
+2. Adds/changes, deletes/trash and renames/moves in a monitored drive produce scan events for the mapped folders (both old and new for moves).
+3. Events are committed before the page token is saved: a crash between the two replays the changes rather than losing them.
+4. An invalid page token triggers a re-snapshot and diff without losing changes.
+5. Rate-limit responses (403 rateLimitExceeded, 429, `Retry-After`) back off without failing the monitor.
+
+## Boundaries
+- **Always:** follow `CONSTRAINTS.md`; validate external input at the boundary.
+- **Ask first:** Reusing rclone.conf tokens.
+- **Never:** Request scopes beyond drive.readonly.

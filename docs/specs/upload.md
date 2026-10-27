@@ -1,5 +1,16 @@
 # Spec: the upload pipeline (v1)
 
+**Module:** `upload` · **Depends on:** core, rclone, scan, notifications · **Decisions:** ADR-0003, ADR-0011 · **Status:** approved 2026-10-27
+
+## Objective
+Move finished local media to the user's rclone remotes per file, only once it is ready (age, stability, not being written, scanned), without stalling on seeding torrents, and without ever removing a source that was not confirmed uploaded.
+
+## Non-goals
+- Service-account rotation
+- Server-side mover
+- Folder-size thresholds (cloudplow model)
+- Defining rclone remotes (the user's rclone.conf owns them)
+
 This consolidates the upload decisions in the ADRs in [../decisions/](../decisions/README.md). The research behind it is in [../research/upload-readiness.md](../research/upload-readiness.md).
 
 ## Model
@@ -64,3 +75,24 @@ This consolidates the upload decisions in the ADRs in [../decisions/](../decisio
 - Server-side mover.
 - unionfs hidden-file cleaning.
 - Service-account rotation.
+
+## Acceptance criteria
+1. A file becomes eligible only after its readiness rules pass; any mtime change restarts its age clock.
+2. A file held open for writing (or write-locked) by any process is not uploaded while the optional open-file check is active; a read-only open (e.g. a seeding torrent client, Plex) does not block.
+3. Without `pid: host`/`SYS_PTRACE`, the UI states that only age and stability checks apply; uploads still work.
+4. Two files with identical basenames in different folders in one batch are tracked and completed independently.
+5. The source file is removed only after rclone reports the transfer successful; a cancelled or failed transfer leaves the source intact and the entry retried with backoff.
+6. Killing the rclone child mid-transfer leads to restart and re-queue; the file is uploaded exactly once after recovery.
+7. A remote returning quota/upload-limit errors is put on cooldown and the destination's next remote is used until the cooldown ends.
+8. Outside a schedule window no new transfer starts; transfers in flight finish.
+9. Hardlinked files follow the destination's policy (upload, reported as 'space not reclaimed', or defer while `nlink > 1`).
+10. SABnzbd/NZBGet paused by Autoplow are always resumed: after uploads go idle (grace period), on error, on shutdown, and by periodic reconcile after a crash.
+11. Sustained 10 TB/day across remotes completes without Autoplow exceeding its resource budget (project.md).
+
+## Boundaries
+- **Always:** follow `CONSTRAINTS.md`; validate external input at the boundary.
+- **Ask first:** Touching (normalising) local file mtimes beyond the opt-in rule; Supporting additional downloaders.
+- **Never:** Delete a source without a confirmed successful transfer; Touch a hardlinked file's mtime; Write to the user's rclone.conf.
+
+## Open questions
+- Default readiness values (**decided 2026-10-27:** age 2 min, stability 2 checks 30 s apart).

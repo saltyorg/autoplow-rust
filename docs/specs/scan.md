@@ -1,5 +1,15 @@
 # Spec: the scan pipeline (v1)
 
+**Module:** `scan` · **Depends on:** core, targets, arr, notifications · **Decisions:** ADR-0008, ADR-0009, ADR-0010 · **Status:** approved 2026-10-27
+
+## Objective
+Turn every change signal (Arr events, legacy/Bazarr/generic webhooks, local filesystem, manual/API; Drive via `gdrive`) into the minimal, correct set of folder scans on every relevant media server, without ever losing an event, and with one slow or offline server never delaying the others.
+
+## Non-goals
+- Item metadata refresh/analyze (autopulse style; ADR-0009)
+- Waiting for Plex analysis before upload
+- Scanning library roots by default
+
 This consolidates the scan decisions in the ADRs in [../decisions/](../decisions/README.md). The architecture is described in [../architecture.md](../architecture.md).
 
 ## Triggers
@@ -24,7 +34,7 @@ Common to all triggers:
 - A `Test` event returns 2xx and queues nothing.
 
 ## Paths
-- Rewrite rule sets exist at three scopes: per trigger, per target, and per trigger→target pair. A pair's own set replaces the target's set *(proposed)*.
+- Rewrite rule sets exist at three scopes: per trigger, per target, and per trigger→target pair. A pair's own set replaces the target's set *(decided 2026-10-27)*.
 - Overlapping source prefixes within one set are rejected.
 - **Paths are compared by component** (cleaned, split on `/`), so a trailing slash is irrelevant and `/mnt/Movies` can never match `/mnt/Movies4K`. Paths are Linux absolute paths.
 - **Library resolution:** a folder is scanned in **exactly the set of libraries (on one or more servers) whose locations contain it by components**. That is the same set the server would index. There is no accidental multi-match, and an intended one (the same location in two libraries) is honoured.
@@ -74,3 +84,26 @@ Common to all triggers:
 - How to discover Tofa's library root paths.
 - Default values for minimum age and maximum wait.
 - ~~Evaluate autopulse's scan approach~~: done. Approach A stays the only mode (see [ADR-0009](../decisions/0009-folder-level-scans-only.md)).
+
+## Acceptance criteria
+1. An Arr `Download` for a file queues exactly one scan per target whose library contains the file's parent folder by path components; `Test` events queue nothing and return 2xx.
+2. Two events for the same folder within the minimum age produce one delivery; an event arriving after a delivery was dispatched always produces another delivery (generation acknowledgement).
+3. A queued parent folder absorbs later child folders for the same target; a child queued first is replaced when its parent arrives.
+4. With a target offline, deliveries to other targets continue unaffected; the offline target's entries are retained across restart and delivered after it recovers (exponential backoff honouring `Retry-After`).
+5. Every queued entry exposes a wait reason (debounce, max-wait pending, anchor missing, path missing, target backoff, ready) via the API.
+6. Delete events skip the existence check; with the optional 'path must exist' check enabled, add/change entries are held until the path exists or a timeout warning is raised.
+7. With any applicable anchor missing, no delivery (and never a delete) is sent for the affected scope.
+8. `/mnt/Movies` never matches a library at `/mnt/Movies4K`; a folder contained by locations in two libraries is delivered to both.
+9. Jellyfin/Emby deliveries for one target are batched into one `Media/Updated` call per delivery cycle (bounded batch size); Plex receives one request per folder.
+10. Burst: 1 000 events/minute for 10 minutes are accepted without loss (no 5xx other than back-pressure 503 with `Retry-After`), and all resulting scans are delivered once targets accept them.
+11. Optional post-delivery verification flags a target that accepted a scan but never indexed the expected path within its delay + margin.
+12. Legacy autoscan `/triggers/{sonarr,radarr,lidarr,manual}`, A-Train and Bazarr (`/triggers/bazarr`, `/stats`, `/api/config-template`) requests recorded from those tools are accepted and produce the same scans.
+
+## Boundaries
+- **Always:** follow `CONSTRAINTS.md`; validate external input at the boundary.
+- **Ask first:** Changing per-trigger auth semantics; Adding a new trigger or target type.
+- **Never:** Drop an accepted event; Scan a library root unless the target explicitly allows it; Use longest-match or raw string-prefix path logic.
+
+## Open questions
+- Default minimum age and maximum wait values (**decided 2026-10-27:** min 30 s, max 10 min; per trigger/target configurable).
+- **Decided 2026-10-27:** a trigger→target pair's rule set replaces the target's set for that pair.
