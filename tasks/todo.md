@@ -570,4 +570,6 @@
 - [ ] Human review.
 
 ## Repository conventions (added during first-commit setup)
+- [ ] **Task 0.1 addendum: constraints tooling.** Install and wire every tool in `CONSTRAINTS.md` (cargo-nextest, cargo-llvm-cov + diff-cover, cargo-mutants + `scripts/check-mutants.sh`, cargo-deny + `deny.toml`, cargo-machete, gitleaks, trunk + `scripts/check-wasm-budget.sh`, Playwright + `@axe-core/playwright`). Add a `scripts/check-task.sh` that runs the full set (no time budget), add the Rust CI workflow, and record the project-coverage baseline.
+  - **V:** a trial run on the branch passes. The floor guard catches a planted `#[allow]`, `todo!()` and `#[ignore]`.
 - [ ] **Task 0.1 addendum: release-please.** Add the release-please workflow (`release-type: rust`) once `Cargo.toml` exists. Releases and the CHANGELOG are generated from Conventional Commits; tags are `vX.Y.Z` (0.x until stable). Until the first release, commits go straight to `main`; switch to PRs with required checks afterwards.

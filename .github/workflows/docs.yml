@@ -37,3 +37,20 @@ jobs:
           BEFORE: ${{ github.event.before || github.event.pull_request.base.sha }}
           AFTER: ${{ github.sha }}
         run: scripts/check-commit-messages.sh "$BEFORE" "$AFTER"
+
+  floor-guard:
+    name: Constraints floor guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check the diff for moves that lower the bar
+        env:
+          BEFORE: ${{ github.event.before || github.event.pull_request.base.sha }}
+        run: |
+          if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+            echo "No previous commit to compare against (first push); floor guard skipped."
+            exit 0
+          fi
+          node scripts/floor-guard.mjs --base "$BEFORE"
