@@ -52,19 +52,22 @@ Inputs:
 ## Task list
 The detailed tasks, with acceptance criteria and verification, are in [todo.md](todo.md). Phases are ordered so that each one leaves a working binary and the highest-risk pieces come early.
 
-| Phase | Theme | Outcome |
+| Phase | Module | Outcome |
 |---|---|---|
-| 0 | Foundation | Binary, config, store, supervisor, paths, API, auth, observability, UI shell |
-| 1 | Scan pipeline, core slice | Manual scan to the Plex queue and delivery, end to end |
-| 2 | Scan pipeline, breadth | Arr/legacy/Bazarr/generic triggers; Jellyfin, Emby, Tdarr, Autoplow and Tofa targets; anchors, path checks, verification |
-| 3 | Arr connection manager | Managed webhooks with drift repair and the migration helper |
-| 4 | Uploads | In-process rclone, per-file queue, readiness, failover, schedules, downloaders |
-| 5 | Throttle | Session sources and policy modes into `core/bwlimit` |
-| 6 | Notifications | Durable outbox, Discord, Apprise, webhook |
-| 7 | Local FS and Google Drive triggers | inotify/walk/both; Drive OAuth with snapshot and Changes API |
-| 8 | Library parity | Findings, review UI, verified fixes |
-| 9 | Track preferences | Plex track propagation |
-| 10 | Packaging | Docker image, Saltbox notes, release |
+| 0 | `core` | Workspace, constraints tooling, store, supervisor, paths, config/bootstrap, API/auth, observability, UI shell |
+| 1 | `notifications` | Durable outbox; Discord, Apprise and webhook channels |
+| 2 | `targets` | Plex, Jellyfin, Emby, Tdarr, Autoplow and (provisional) Tofa clients |
+| 3 | `arr` | Arr client, webhook receiver and parsers, managed connections, migration helper |
+| 4 | `scan` | Triggers, per-target durable queues, delivery, anchors, verification, filesystem trigger, load test |
+| 5 | `gdrive` | OAuth accounts; snapshot plus Changes API monitors |
+| 6 | `rclone` | Supervised `rcd` and RC client |
+| 7 | `upload` | Per-file queue, readiness, open-file detection, failover, schedules, downloaders, soak test |
+| 8 | `throttle` | Session registry and bandwidth policies |
+| 9 | `parity` | Engine, fixes, review UI |
+| 10 | `track-preferences` | Matching, per-user preferences, UI |
+| 11 | Release | Container, release pipeline, replacement checklists |
+
+Phases follow the approved build order in `docs/specs/README.md`. Every task traces to numbered acceptance criteria in its module spec.
 
 A checkpoint after each phase requires: tests green, build clean, a demo of the phase outcome, and a human review.
 
@@ -89,6 +92,5 @@ A checkpoint after each phase requires: tests green, build clean, a demo of the 
 | Shared production test host | High | Live tests always run capped and one server at a time; check processes by memory before attributing any load. |
 
 ## Open questions
-- **Repository:** `saltyorg/autoplow-rust` exists on GitHub (public, empty). What goes in the first commit is still to be discussed.
-- **Default timings:** minimum age, maximum wait and retry ceilings.
+- ~~Default timings~~ decided in the module specs (scan: 30 s minimum age, 10 min maximum wait; upload: 2 min age, 2 stability checks 30 s apart).
 - **Tofa research,** pending verification against a running Tofa server: library roots, the websocket, the webhook trigger, TVDB IDs.
