@@ -51,14 +51,16 @@
 7. **Toolchain pinned** in `rust-toolchain.toml` (1.99.1). New clippy releases add lints, and with `-D warnings` they would otherwise break CI unexpectedly. Bump the pin deliberately.
 
 ## CI gates (beyond lints)
+Thresholds and where each check runs are defined in [CONSTRAINTS.md](../CONSTRAINTS.md), which wins if the two disagree.
+
 | Gate | Purpose |
 |---|---|
 | `cargo fmt --check` | Formatting |
 | `cargo clippy --workspace --all-targets --all-features -- -D warnings` | The policy above |
 | Check that every member crate sets `lints.workspace = true` | Stops a crate opting out silently |
 | `cargo nextest run` | Tests |
-| `cargo llvm-cov` with a coverage floor (start at 80% on core crates) | Untested code |
-| **`cargo mutants`** on core crates (paths, queue, readiness, policy) | Catches tests that pass whether or not the code is right, which AI-written tests often do. Gate on surviving mutants in changed code |
+| `cargo llvm-cov` with diff-cover: changed lines ≥ 90 % (see `CONSTRAINTS.md`) | Untested code |
+| **`cargo mutants --in-diff`** on changed code: mutation score ≥ 80 % (see `CONSTRAINTS.md`) | Catches tests that pass whether or not the code is right, which AI-written tests often do |
 | `cargo deny` (advisories, licenses, bans, sources) | Supply chain |
 | `cargo machete` | Unused dependencies |
 | `proptest` property tests | Path normalisation, rewrite rules, queue state machines |

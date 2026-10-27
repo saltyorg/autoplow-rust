@@ -16,8 +16,9 @@ Start with `docs/README.md`.
 - **Record significant decisions as ADRs** in `docs/decisions/`. Never delete an ADR; supersede it.
 
 ## Quality bar (never weaken silently)
+- **Read `CONSTRAINTS.md` before writing code. Do not weaken it to make a change pass.** Run `node scripts/floor-guard.mjs --base <ref>` before handing work back.
 - The lint and CI policy in `docs/quality-policy.md` is enforced workspace-wide.
-- **Fix the code, not the lint.** `#[allow]` is forbidden. A truly justified exception uses `#[expect(lint, reason = "...")]` and must be called out in review.
+- **Fix the code, not the lint.** `#[allow]` is forbidden. A truly justified exception uses `#[expect(lint, reason = "...")]`, needs a row in the CONSTRAINTS.md Exceptions table, and must be called out in review.
 - **Never** lower thresholds, delete or skip tests, or relax the toolchain pin or lints without an ADR.
 
 ## Public repository rules ([ADR-0015](docs/decisions/0015-public-documentation-rules.md))
