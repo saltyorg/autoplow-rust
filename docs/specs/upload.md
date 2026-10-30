@@ -59,7 +59,10 @@ This consolidates the upload decisions in the ADRs in [../decisions/](../decisio
 - **Schedule windows:**
   - New transfers start only inside a window.
   - Transfers already in flight finish when the window closes.
-- **Throttle:** bandwidth tiers by stream count, plus "pause new uploads" (see the throttle spec).
+- **Throttle:** bandwidth tiers by stream count, plus optionally "no new transfers above N streams" (see the throttle spec).
+- **Manual controls** (rclone cannot pause a transfer, so there is no "pause"):
+  - **Hold new uploads:** a toggle. While on, no new transfer starts; transfers in flight finish. The hold is persisted and survives a restart.
+  - **Stop:** for one transfer or all of them. Calls rclone `job/stop`; the source stays intact and the file is re-queued. A re-queued file restarts from the beginning unless the backend resumes uploads.
 
 ## Downloaders
 - **Supported:** SABnzbd and NZBGet.
@@ -88,6 +91,8 @@ This consolidates the upload decisions in the ADRs in [../decisions/](../decisio
 9. Hardlinked files follow the destination's policy (upload, reported as 'space not reclaimed', or defer while `nlink > 1`).
 10. SABnzbd/NZBGet paused by Autoplow are always resumed: after uploads go idle (grace period), on error, on shutdown, and by periodic reconcile after a crash.
 11. Sustained 10 TB/day across remotes completes without Autoplow exceeding its resource budget (project.md).
+12. With "hold new uploads" on, no new transfer starts, transfers in flight complete, and the hold is still on after a daemon restart.
+13. Stopping a transfer (one or all) leaves the source intact and re-queues the file; nothing is left at the destination.
 
 ## Boundaries
 - **Always:** follow `CONSTRAINTS.md`; validate external input at the boundary.
