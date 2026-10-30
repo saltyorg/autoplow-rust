@@ -51,7 +51,10 @@ Module specs say *what* a page shows. This spec says *how* every page looks and 
 - **Width:**
   - List pages (Triggers, Targets, Notifications) and Settings cap their content at 1040 px, so a few columns don't spread across a wide screen.
   - Data-heavy pages (Dashboard, Health, Scans, Uploads, Throttle, Library parity, the Google Drive trigger) use the full width.
-- **Settings:** the section menu has a fixed width of 200 px, and the section content sits beside it.
+- **Settings:**
+  - Sections, in order: General, Anchors, rclone, Uploads, Library parity, Google Drive, API keys, Appearance, About.
+  - The section menu has a fixed width of 200 px, and the section content sits beside it.
+  - **Settings save as you change them.** Each card shows when it was last saved; there is no Save button. A change that needs confirming (a password) goes through a dialog, which keeps its own Save.
 - **Small screens:**
   - No page scrolls sideways.
   - Wide tables scroll inside their own container.
@@ -63,11 +66,13 @@ Module specs say *what* a page shows. This spec says *how* every page looks and 
   - Library parity and its finding detail.
   - Track preferences, Notifications.
   - The Google Drive trigger page.
+  - Sign-in.
   - The Triggers and Targets lists, and every Settings section.
 - **Dialogs:** a single item from a list, opened from that list.
   - A trigger, a target or a notification channel.
   - An API key, an OAuth client or a Google account.
-  - A user override.
+  - A track-preferences user, an anchor, a destination, a downloader.
+  - Scanning a folder by hand, with a preview per target.
   - Adding something with several steps (such as an Arr instance) is a stepped dialog.
 - **Dialog behaviour:**
   - **Save:** disabled until something changes. While there are unsaved edits, the footer says "Unsaved changes".
