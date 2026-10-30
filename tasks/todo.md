@@ -360,9 +360,29 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - [ ] Load test passes.
 - [ ] Human review.
 
-## Phase 5: `gdrive`
+## Phase 5: `rclone`
 
-### Task 5.1: Google accounts (OAuth web flow)
+### Task 5.1: Supervised `rcd` and RC client
+- [ ] **AC (rclone AC1–AC8):**
+  - Unix socket in a 0700 directory.
+  - Minimum version 1.75.
+  - Restart with "job state lost" reporting.
+  - Typed client and job/group tracking.
+  - Stats-group sweep.
+  - Bandwidth limit applied live.
+  - Host SIGTERM isolated from rclone's hook.
+  - Crypt `decode` via `backend/command`, batched (rclone AC8).
+- **V:** integration tests with crypt over local; `kill -9` the child; 24-hour soak (group count bounded).
+- **Dep:** 0.4.
+- **Files:** `crates/rclone/src/{child,client,jobs}.rs`.
+- **Size:** M.
+
+### Checkpoint: rclone
+- [ ] The `rcd` child survives `kill -9` and recovers; bandwidth changes apply live; human review.
+
+## Phase 6: `gdrive`
+
+### Task 6.1: Google accounts (OAuth web flow)
 - [ ] **AC (gdrive AC1):**
   - The user's own OAuth web client.
   - Connect and callback with state.
@@ -373,7 +393,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Files:** `crates/gdrive/src/{oauth,accounts}.rs`.
 - **Size:** M.
 
-### Task 5.2: Drive monitors
+### Task 6.2: Drive monitors
 - [ ] **AC (gdrive AC2–AC5):**
   - Snapshot plus Changes API.
   - Old and new paths.
@@ -381,31 +401,34 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
   - Re-snapshot on an invalid token.
   - Rate-limit backoff.
 - **V:** fake Drive API: crash replay, token loss.
-- **Dep:** 5.1, 4.3.
+- **Dep:** 6.1, 4.3.
 - **Files:** `crates/gdrive/src/{snapshot,changes,trigger}.rs`.
 - **Size:** M.
 
-### Checkpoint: gdrive
-- [ ] A real Drive account connects from the UI, and a change produces a scan for the mapped folder; human review.
-
-## Phase 6: `rclone`
-
-### Task 6.1: Supervised `rcd` and RC client
-- [ ] **AC (rclone AC1–AC7):**
-  - Unix socket in a 0700 directory.
-  - Minimum version 1.75.
-  - Restart with "job state lost" reporting.
-  - Typed client and job/group tracking.
-  - Stats-group sweep.
-  - Bandwidth limit applied live.
-  - Host SIGTERM isolated from rclone's hook.
-- **V:** integration tests with crypt over local; `kill -9` the child; 24-hour soak (group count bounded).
-- **Dep:** 0.4.
-- **Files:** `crates/rclone/src/{child,client,jobs}.rs`.
+### Task 6.3: Crypt remotes
+- [ ] **Spike first:** confirm against rclone 1.75 that `decode` through `rc` handles full paths, directory-name encryption on and off, every filename encoding, and snapshot-sized batches. Record the result in `docs/platform-notes/`.
+- [ ] **AC (gdrive AC6):**
+  - Snapshot stores encrypted and decrypted names; polls decode only unseen names.
+  - Rewrite rules and filters match decrypted paths.
+  - Undecryptable names produce no scan and a change-log entry; a missing crypt remote stops the monitor with `health`.
+- **V:** fake Drive API serving names encrypted by a real crypt-over-local remote.
+- **Dep:** 6.2, 5.1.
+- **Files:** `crates/gdrive/src/crypt.rs`, `crates/gdrive/src/snapshot.rs`, `docs/platform-notes/`.
 - **Size:** M.
 
-### Checkpoint: rclone
-- [ ] The `rcd` child survives `kill -9` and recovers; bandwidth changes apply live; human review.
+### Task 6.4: Change log, manual controls and snapshot browser
+- [ ] **AC (gdrive AC7–AC10):**
+  - Change log with outcomes, written in the event transaction; retention pruning.
+  - Poll now, persisted pause and resume, rebuild snapshot (diff only).
+  - Snapshot search with paging and total count; both names for crypt remotes.
+  - API endpoints and UI for all of the above.
+- **V:** fake Drive API: pause across restart, rebuild diff, retention with an injected clock.
+- **Dep:** 6.2.
+- **Files:** `crates/gdrive/src/{changelog,controls}.rs`, `crates/api/src/gdrive.rs`, `crates/ui/src/gdrive.rs`.
+- **Size:** M.
+
+### Checkpoint: gdrive
+- [ ] A real Drive account connects from the UI, and a change produces a scan for the mapped folder, including one under a crypt remote; the change log shows it; human review.
 
 ## Phase 7: `upload`
 
@@ -416,7 +439,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
   - Source removed only after success.
   - Re-queue after a child crash.
 - **V:** duplicate-basename and crash-recovery tests.
-- **Dep:** 6.1, 0.3.
+- **Dep:** 5.1, 0.3.
 - **Files:** `crates/upload/src/{destinations,queue}.rs`.
 - **Size:** M.
 
@@ -503,7 +526,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
   - Limit applied within 5 s.
   - Optional "no new transfers above N streams".
 - **V:** table tests including the 10 Gbps outlier; integration test with `rcd`.
-- **Dep:** 8.1, 6.1.
+- **Dep:** 8.1, 5.1.
 - **Files:** `crates/throttle/src/policy.rs`.
 - **Size:** S.
 

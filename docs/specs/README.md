@@ -13,14 +13,14 @@
 | `targets` | [targets.md](targets.md) | Clients for Plex, Jellyfin, Emby, Tofa, Tdarr and Autoplow: libraries, scan calls, sessions | `core` |
 | `arr` | [arr.md](arr.md) | Sonarr/Radarr/Lidarr/Whisparr client, webhook receiver and parsers, managed connections, migration helper | `core`, `notifications` |
 | `scan` | [scan.md](scan.md) | Triggers, per-target durable queues, delivery, verification | `core`, `targets`, `arr`, `notifications` |
-| `gdrive` | [gdrive.md](gdrive.md) | Google OAuth accounts, snapshot plus Changes API, Drive trigger | `core`, `scan` |
+| `gdrive` | [gdrive.md](gdrive.md) | Google OAuth accounts, snapshot plus Changes API, Drive trigger, crypt name decoding, change log | `core`, `scan`, `rclone` |
 | `rclone` | [rclone.md](rclone.md) | Supervised `rcd`, RC client, job tracking | `core` |
 | `upload` | [upload.md](upload.md) | Destinations, per-file queue, readiness, failover, schedules, downloaders | `core`, `rclone`, `scan`, `notifications` |
 | `throttle` | [throttle.md](throttle.md) | Session registry and bandwidth policy | `targets`, `rclone` |
 | `parity` | [parity.md](parity.md) | Library parity engine, fixes, review | `core`, `targets`, `arr`, `notifications` |
 | `track-preferences` | [track-preferences.md](track-preferences.md) | Plex track preferences | `core`, `targets` |
 
-**Build order:** `core` → `notifications`, `targets` → `arr` → `scan` → `gdrive` → `rclone` → `upload` → `throttle` → `parity` → `track-preferences`.
+**Build order:** `core` → `notifications`, `targets` → `arr` → `scan` → `rclone` → `gdrive` → `upload` → `throttle` → `parity` → `track-preferences`.
 
 **Rules:**
 - Dependencies point one way.

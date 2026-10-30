@@ -3,7 +3,7 @@
 **Module:** `rclone` · **Depends on:** core · **Decisions:** ADR-0003 · **Status:** approved 2026-10-27
 
 ## Objective
-Run and supervise `rclone rcd` as a private child process, and give `upload` and `throttle` a typed, reliable RC client: transfers, jobs, stats and bandwidth.
+Run and supervise `rclone rcd` as a private child process, and give `upload`, `throttle` and `gdrive` a typed, reliable RC client: transfers, jobs, stats, bandwidth and crypt name decoding.
 
 ## Non-goals
 - Embedding rclone (ADR-0001, superseded).
@@ -22,6 +22,7 @@ Run and supervise `rclone rcd` as a private child process, and give `upload` and
   - `core/stats`, `core/transferred`, `core/stats-delete`
   - `core/bwlimit`
   - `config/listremotes`
+  - `backend/command` with the crypt `decode` command, in batches (for `gdrive` crypt remotes)
 - **Polling:** completion and progress, by job ID and group.
 - **Cleanup:** finished stats groups are swept.
 
@@ -33,6 +34,7 @@ Run and supervise `rclone rcd` as a private child process, and give `upload` and
 5. Stats groups for finished jobs are deleted, so the group count stays bounded during a 24-hour soak test.
 6. A bandwidth change via `core/bwlimit` applies to running transfers (verified in an integration test with a crypt-over-local remote).
 7. Autoplow's own SIGTERM shutdown completes even after the child performed partial-file copies, because rclone's atexit hook stays in the child.
+8. `decode` on a crypt-over-local remote returns the original names for a batch of encrypted paths, and reports which names couldn't be decrypted.
 
 ## Boundaries
 - **Always:** follow `CONSTRAINTS.md`.

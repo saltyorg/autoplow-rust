@@ -1,6 +1,6 @@
 # Spec: the Google Drive trigger (v1)
 
-**Module:** `gdrive` · **Depends on:** core, scan · **Decisions:** ADR-0013 · **Status:** approved 2026-10-27
+**Module:** `gdrive` · **Depends on:** core, scan, rclone · **Decisions:** ADR-0013 · **Status:** approved 2026-10-27, crypt remotes, change log, controls and snapshot browser added 2026-10-30
 
 ## Objective
 Turn Google Drive changes (My Drive and shared drives) into scan events for the corresponding mounted paths, with a sign-in flow a user can complete from the UI.
@@ -27,6 +27,7 @@ Turn Google Drive changes (My Drive and shared drives) into scan events for the 
   - **Polling interval:** default 1 minute, minimum 30 seconds.
   - **Minimum age.**
   - **Target excludes.**
+  - **Crypt remote (optional):** the name of a crypt remote in the user's `rclone.conf` that wraps this drive (see below).
 
 ## Change tracking
 Based on the bernard and autoplow designs.
@@ -50,6 +51,42 @@ Based on the bernard and autoplow designs.
    - Rate-limited per account.
    - Exponential backoff that honours `Retry-After` and 403 `rateLimitExceeded`.
 
+## Crypt remotes
+When the monitored folder holds an rclone crypt remote, the Drive API only sees encrypted names, while the mount and the media servers see decrypted ones. Rewrite rules and filters are written against **decrypted** paths.
+- **How names are decrypted:** through the `rclone` module, with rclone's own crypt `decode` backend command (`backend/command` on the crypt remote) on our supervised `rcd`. It uses the remote's settings from the user's `rclone.conf`: password, salt, filename and directory-name encryption, encoding, suffix. Autoplow doesn't read keys itself and never touches the mount.
+- **When:**
+  - The snapshot stores both the encrypted and the decrypted name of every entry. Names are decoded in batches when the snapshot is built.
+  - Each poll decodes only names it hasn't seen.
+- **Failures:**
+  - A name that can't be decrypted (a file that isn't part of the crypt remote, or a wrong password) isn't mapped. It's recorded in the change log as "couldn't decrypt", and no scan is produced.
+  - If the crypt remote is missing from `rclone.conf`, or most names in the first snapshot fail to decrypt, the monitor stops with a `health` notification instead of mapping garbage.
+- **Spike required:** before the design is final, verify against rclone 1.75 that `decode` through `rc` handles full paths, directory-name encryption on and off, every filename encoding, and batches large enough for a full snapshot.
+
+## Change log
+Every change the monitor reads is recorded, with what Autoplow did about it, so the UI can list recent changes.
+- **Each entry has:**
+  - Time, monitor and change kind (add, change, trash, delete, rename, move).
+  - Drive path (decrypted when a crypt remote is set), the old path for renames and moves, and the mapped local path.
+  - **Outcome:** a scan was queued (with a link to it), dropped by a filter (which one), not mapped by any rewrite rule, waiting for the minimum age, or couldn't decrypt.
+- **Retention:** 7 days by default and configurable. Older entries are pruned daily.
+- Entries are written in the same transaction as the events and the snapshot update, so the log never shows a change that was lost or one that never happened.
+
+## Manual controls
+- **Poll now:** runs one poll for the monitor right away. It goes through the same per-account rate limit.
+- **Pause and resume:**
+  - Stops polling. The pause is persisted and survives a restart.
+  - On resume, polling continues from the saved page token, so changes made during the pause are still processed. If the token is no longer valid, the invalid-token path below applies.
+- **Rebuild snapshot:**
+  - Asks for confirmation.
+  - Takes a fresh full listing, diffs it against the stored snapshot, and emits events for the differences (the same path as an invalid page token). Nothing is lost or scanned twice.
+
+## Snapshot browser
+A read-only view of what the snapshot holds for a monitor:
+- Search by name or path, with paging.
+- The total entry count.
+- For crypt remotes, the encrypted and decrypted names side by side.
+- Each entry's mapped local path, or "not mapped".
+
 ## Interaction with the rclone mount
 - A change seen in the Drive API isn't visible to the rclone VFS mount until the mount's own change polling notices it (rclone's `--poll-interval`, default 1 minute).
 - **Decided:**
@@ -58,7 +95,7 @@ Based on the bernard and autoplow designs.
 
 ## Not in v1
 - Service accounts.
-- Using tokens from `rclone.conf` (possible later).
+- Using tokens from `rclone.conf` (possible later). Crypt remotes use only the crypt settings from `rclone.conf`, not its tokens.
 
 ## Acceptance criteria
 1. A user with their own OAuth web client can connect an account from the UI; refresh tokens are stored encrypted and survive key rotation.
@@ -66,8 +103,13 @@ Based on the bernard and autoplow designs.
 3. Events are committed before the page token is saved: a crash between the two replays the changes rather than losing them.
 4. An invalid page token triggers a re-snapshot and diff without losing changes.
 5. Rate-limit responses (403 rateLimitExceeded, 429, `Retry-After`) back off without failing the monitor.
+6. With a crypt remote set, changes under encrypted names produce scans for the decrypted mapped paths. A name that can't be decrypted produces no scan and a "couldn't decrypt" change-log entry. A missing crypt remote stops the monitor with a `health` notification.
+7. Every change read appears in the change log with its outcome, written in the same transaction as its events. Entries older than the retention period are pruned.
+8. "Poll now" runs a poll immediately, within the rate limit. A paused monitor makes no API calls, stays paused after a daemon restart, and on resume processes the changes made while paused.
+9. "Rebuild snapshot" replaces the snapshot and emits events only for the differences.
+10. The snapshot browser finds entries by name or path and shows the total count; for crypt remotes it shows both names.
 
 ## Boundaries
 - **Always:** follow `CONSTRAINTS.md`; validate external input at the boundary.
 - **Ask first:** Reusing rclone.conf tokens.
-- **Never:** Request scopes beyond drive.readonly.
+- **Never:** Request scopes beyond drive.readonly; read crypt keys from `rclone.conf` ourselves (decryption goes through rclone).

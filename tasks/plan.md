@@ -59,8 +59,8 @@ The detailed tasks, with acceptance criteria and verification, are in [todo.md](
 | 2 | `targets` | Plex, Jellyfin, Emby, Tdarr, Autoplow and (provisional) Tofa clients |
 | 3 | `arr` | Arr client, webhook receiver and parsers, managed connections, migration helper |
 | 4 | `scan` | Triggers, per-target durable queues, delivery, anchors, verification, filesystem trigger, load test |
-| 5 | `gdrive` | OAuth accounts; snapshot plus Changes API monitors |
-| 6 | `rclone` | Supervised `rcd` and RC client |
+| 5 | `rclone` | Supervised `rcd` and RC client, crypt `decode` |
+| 6 | `gdrive` | OAuth accounts; snapshot plus Changes API monitors; crypt remotes, change log, controls, snapshot browser |
 | 7 | `upload` | Per-file queue, readiness, open-file detection, failover, schedules, downloaders, soak test |
 | 8 | `throttle` | Session registry and bandwidth policies |
 | 9 | `parity` | Engine, fixes, review UI |
