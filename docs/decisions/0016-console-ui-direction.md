@@ -19,7 +19,7 @@ Eight visual directions were mocked up with the same content: Console, Arr-nativ
   - unsaved-changes handling
   - row actions and width caps
   - secrets with an inline eye toggle
-  - the principle of as few buttons as possible
+  - inline controls instead of separate buttons where a control can live on the thing it acts on
 - **Precedence:** the UI spec is binding for every module's pages. The mockups are reference material and are kept outside the repository.
 
 ## Alternatives Considered

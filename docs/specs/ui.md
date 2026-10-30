@@ -5,10 +5,7 @@
 Module specs say *what* a page shows. This spec says *how* every page looks and behaves, so pages built by different modules feel like one app. The reference mockups are kept outside the repository; where they and this spec disagree, this spec wins.
 
 ## Principles
-1. **Fewer buttons.** Every control has to earn its place.
-   - Put an action where its object is: inside the field, in the row or in the section header. Don't add a separate button for it.
-   - Before adding a button, check whether an existing control, an inline affordance or the dialog it opens can do the job.
-   - Don't offer two ways to do the same thing on one screen.
+1. **Inline before separate.** When a control can live inside or on the thing it acts on, put it there instead of adding a separate button. For example, the show/hide toggle for a secret is an eye icon inside the field. This is not a limit on buttons in general: an action the admin needs gets its button.
 2. **Dense, not cramped.** Admins scan a lot of rows, so tables are compact and nothing is padded for decoration. Every interactive control still has a target of at least 44 × 44 px.
 3. **State is visible.** Every waiting, held or failed item shows *why*, in words, where it appears.
 4. **Status never relies on colour alone.** It always pairs a colour with a symbol and words: ✓ healthy, ▲ backing off, ○ disabled.
@@ -81,9 +78,14 @@ Module specs say *what* a page shows. This spec says *how* every page looks and 
 ## Controls
 - **Rows:**
   - A row is opened with a button in its last column, not by making its name a link.
-  - Row actions sit in that last column, right-aligned on one line. A row has at most two: its main action and Open. Everything else lives in the dialog or detail page.
+  - Row actions sit in that last column, right-aligned on one line.
+  - Buttons in the same column have the same width: a lone action button fills the column, which is as wide as its widest button.
+- **Button labels are one word** whenever one word says clearly what happens: Send, Retry, Edit, Discard, Open, Copy, Test, Add, Delete.
+  - The page, section or row gives the rest. The full meaning goes in the button's accessible name, for example "Edit path mapping for OK Computer".
+  - A second word is added only when one word would be ambiguous: two "Choose" buttons side by side, or "Stop all…" next to per-row "Stop".
+  - Links and navigation are named after where they go and are not limited to one word.
 - **Links:** only for going to another page. A link in a row's action column is styled like a button.
-- **Bulk actions:** appear in the section header and act on the selected or filtered rows (for example "Apply suggested fix (2)" or "Discard all shown…").
+- **Bulk actions:** appear in the section header and act on the selected or filtered rows (for example "Fix (2)" or "Discard all…").
 - **Labels:** a label ending in "…" asks for confirmation before acting.
 - **Fixed size:** a control whose label or icon changes keeps the same size in every state.
 - **Icon-only controls:** have an accessible name, a tooltip and a 44 px target.
@@ -105,7 +107,8 @@ Module specs say *what* a page shows. This spec says *how* every page looks and 
 2. Changing the accent to a colour below 4.5:1 against `bg` is refused with the measured ratio shown; button text on the accent picks the higher-contrast of dark and light.
 3. In every dialog, Save is disabled until an edit, and Close, Cancel, Esc and a click outside with unsaved edits all show the discard confirmation.
 4. No dialog opens another dialog (Playwright walks every dialog's controls).
-5. Row actions on every table are in the last column, right-aligned, at most two per row.
+5. Row actions on every table are in the last column, right-aligned on one line, and lone buttons in a column all have the same width.
+9. Every button label is one word unless a second word is needed to tell it apart from a nearby button, and every button has an accessible name that says what it acts on.
 6. Every interactive control measures at least 44 × 44 px, and controls with changing labels keep their size (Playwright measures both).
 7. At 2560 px, list and Settings pages keep their content at 1040 px or less; at 390 px no page scrolls sideways.
 8. Every page passes axe with zero serious or critical violations.
