@@ -114,16 +114,18 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** S.
 
 ### Task 0.9: UI shell (Leptos)
-- [ ] **AC (core AC9, core-bootstrap-api AC4):**
+- [ ] **AC (core AC9, core-bootstrap-api AC4, ui AC1–AC3, AC6–AC8):**
   - CSR app built with trunk and `wasm-opt -Oz`, embedded with rust-embed.
   - Login, navigation, live event client, API client from `api-types`.
-- **V:** Playwright login test; zero serious or critical axe violations; WASM within budget.
+  - Shared building blocks from the UI spec: colour tokens, accent with the contrast rule, density, sidebar, width caps, dialog with unsaved-changes handling, secret field with eye toggle.
+- **V:** Playwright login test and UI-rule checks (sizes, widths, dialog close paths); zero serious or critical axe violations; WASM within budget.
 - **Dep:** 0.6, 0.8.
-- **Files:** `crates/ui/src/*.rs`, `crates/autoplow/src/embed.rs`, `e2e/login.spec.ts`.
+- **Files:** `crates/ui/src/*.rs`, `crates/autoplow/src/embed.rs`, `e2e/login.spec.ts`, `e2e/ui-rules.spec.ts`.
 - **Size:** M.
 
 ### Checkpoint: core
 - [ ] Bootstrap seeds an admin user and an API key; `apply` is idempotent; the UI logs in.
+- [ ] Every later module's pages are added to `e2e/ui-rules.spec.ts` (ui AC4, AC5) as they land.
 - [ ] All gates pass.
 - [ ] Human review.
 

@@ -3,6 +3,7 @@
 **Status:** capability map approved 2026-10-27. Module IDs are permanent; never rename them.
 
 - **Project-level spec:** [project.md](project.md) (objective, users, success criteria, commands, structure, style, testing, boundaries).
+- **UI rules:** [ui.md](ui.md) (look, layout, pages versus dialogs, controls; binding for every module's pages).
 - **Module specs:** one per module, named by module ID. Each module's UI pages ship inside the module, on the `core` UI shell.
 
 ## Capability map

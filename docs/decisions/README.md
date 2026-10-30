@@ -19,3 +19,4 @@ Format: Status, Date, Context, Decision, Alternatives Considered, Consequences. 
 | [0013](0013-google-drive-via-user-oauth-client.md) | Google Drive with the user's own OAuth client | Accepted |
 | [0014](0014-v1-feature-scope.md) | v1 feature scope | Accepted |
 | [0015](0015-public-documentation-rules.md) | Public documentation rules | Accepted |
+| [0016](0016-console-ui-direction.md) | Console visual direction and UI rules | Accepted |

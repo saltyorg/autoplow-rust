@@ -42,6 +42,7 @@ Provide the foundation every module builds on. A component can be restarted when
   - `/health` and readiness.
 - **UI shell:**
   - Leptos CSR app embedded in the binary: login, navigation, the live event client.
+  - Follows the [UI rules](ui.md): tokens, accent, density, the sidebar, and dialog behaviour live in the shell.
   - An API client from `api-types`.
 
 ## Acceptance criteria
