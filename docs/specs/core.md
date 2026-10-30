@@ -15,7 +15,7 @@ Provide the foundation every module builds on. A component can be restarted when
 ## Scope
 - **Supervisor:**
   - Every long-running component is an async task, `run(shutdown) -> Result<()>`.
-  - A failed or panicked task restarts with backoff.
+  - A failed or panicked task restarts with backoff. Repeated restarts raise `component.failing` (see the notifications spec).
   - A config change rebuilds only the components that depend on it.
   - Graceful shutdown has a deadline.
 - **Store:**
@@ -42,7 +42,7 @@ Provide the foundation every module builds on. A component can be restarted when
   - An API client from `api-types`.
 
 ## Acceptance criteria
-1. Killing a component task, or making it panic, leads the supervisor to restart it with backoff while other components keep running. A panic is logged with the component name.
+1. Killing a component task, or making it panic, leads the supervisor to restart it with backoff while other components keep running. A panic is logged with the component name. A third restart within 10 minutes raises `component.failing`.
 2. Changing a target's URL through the API takes effect for the next delivery, with no process restart and no lost queue entries.
 3. SIGTERM drains or persists in-flight state and exits within the shutdown deadline (default 30 s).
 4. Migrations apply on an empty database and on every released schema version (test fixtures per version).

@@ -17,7 +17,7 @@ Turn Google Drive changes (My Drive and shared drives) into scan events for the 
    - Google redirects to `https://<our-ui>/api/v1/gdrive/oauth/callback` with a state parameter.
    - The refresh token is stored encrypted, and key rotation re-encrypts it too.
 4. The UI shows the exact redirect URI to register and checks that the request reached us on that URL. Saltbox domains provide HTTPS.
-5. Several Google accounts are supported. Their tokens are refreshed automatically, and a revoked or expired grant raises a `health` notification.
+5. Several Google accounts are supported. Their tokens are refreshed automatically, and a revoked or expired grant raises a `gdrive.account.revoked` notification.
 
 ## Monitors
 - A monitor is (account, drive) where the drive is **My Drive** or a **shared drive**, chosen from a list fetched from the API.
@@ -59,7 +59,7 @@ When the monitored folder holds an rclone crypt remote, the Drive API only sees 
   - Each poll decodes only names it hasn't seen.
 - **Failures:**
   - A name that can't be decrypted (a file that isn't part of the crypt remote, or a wrong password) isn't mapped. It's recorded in the change log as "couldn't decrypt", and no scan is produced.
-  - If the crypt remote is missing from `rclone.conf`, or most names in the first snapshot fail to decrypt, the monitor stops with a `health` notification instead of mapping garbage.
+  - If the crypt remote is missing from `rclone.conf`, or most names in the first snapshot fail to decrypt, the monitor stops with a `gdrive.monitor.stopped` notification instead of mapping garbage.
 - **Spike required:** before the design is final, verify against rclone 1.75 that `decode` through `rc` handles full paths, directory-name encryption on and off, every filename encoding, and batches large enough for a full snapshot.
 
 ## Change log
@@ -103,7 +103,7 @@ A read-only view of what the snapshot holds for a monitor:
 3. Events are committed before the page token is saved: a crash between the two replays the changes rather than losing them.
 4. An invalid page token triggers a re-snapshot and diff without losing changes.
 5. Rate-limit responses (403 rateLimitExceeded, 429, `Retry-After`) back off without failing the monitor.
-6. With a crypt remote set, changes under encrypted names produce scans for the decrypted mapped paths. A name that can't be decrypted produces no scan and a "couldn't decrypt" change-log entry. A missing crypt remote stops the monitor with a `health` notification.
+6. With a crypt remote set, changes under encrypted names produce scans for the decrypted mapped paths. A name that can't be decrypted produces no scan and a "couldn't decrypt" change-log entry. A missing crypt remote stops the monitor with a `gdrive.monitor.stopped` notification.
 7. Every change read appears in the change log with its outcome, written in the same transaction as its events. Entries older than the retention period are pruned.
 8. "Poll now" runs a poll immediately, within the rate limit. A paused monitor makes no API calls, stays paused after a daemon restart, and on resume processes the changes made while paused.
 9. "Rebuild snapshot" replaces the snapshot and emits events only for the differences.

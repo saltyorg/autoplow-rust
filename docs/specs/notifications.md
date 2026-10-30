@@ -19,10 +19,15 @@ Each event belongs to a category. Users subscribe at the level of individual eve
 
 | Category | Event types |
 |---|---|
-| Failures & health | `target.unavailable`, `target.recovered`, `remote.unhealthy`, `remote.quota`, `remote.recovered`, `anchor.missing`, `anchor.restored`, `item.deadlettered`, `downloader.error`, `arr.connection.drift` |
+| Failures & health | `target.unavailable`, `target.recovered`, `remote.unhealthy`, `remote.quota`, `remote.recovered`, `anchor.missing`, `anchor.restored`, `item.deadlettered`, `downloader.error`, `arr.connection.drift`, `gdrive.account.revoked`, `gdrive.monitor.stopped`, `component.failing` |
 | Library parity | `parity.mismatch.found`, `parity.fix.applied`, `parity.fix.failed`, `parity.merged.manual`, `parity.run.completed` |
 | Uploads | `upload.completed` (aggregated), `upload.failed`, `downloader.paused`, `downloader.resumed`, `throttle.changed` |
 | Scans | `scan.delivered` (aggregated), `scan.failed` |
+
+Notes on the health events *(added 2026-10-30)*:
+- `gdrive.account.revoked`: Google revoked or expired an account's grant. Every monitor using that account stops; it is reported once, for the account, not again per monitor.
+- `gdrive.monitor.stopped`: a monitor stopped for a reason of its own, such as a missing crypt remote or names that mostly fail to decrypt.
+- `component.failing`: a background component restarted 3 times within 10 minutes (the default) and is still restarting with backoff. Single restarts are only logged.
 
 ## Routing
 - Each notification target has a list of subscribed event types, so different event types can go to different targets.
