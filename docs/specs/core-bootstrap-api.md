@@ -30,10 +30,10 @@ Configure Autoplow once from Ansible and manage it afterwards through a complete
 version: 1
 admin:
   username: admin
-  password: "..."          # stored as a bcrypt hash
+  password: "..."          # stored as an argon2 hash
   api_keys:
     - name: ansible
-      key: "..."           # stored hashed; used as Authorization: Bearer
+      key: "..."           # stored encrypted; used as Authorization: Bearer
 settings:
   callback_base_url: http://autoplow:3030
 rclone:

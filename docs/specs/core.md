@@ -29,9 +29,12 @@ Provide the foundation every module builds on. A component can be restarted when
   - The picker backends: a local filesystem browser, and proxies to other modules' listings.
 - **Auth:**
   - A single admin user (argon2).
-  - API keys stored hashed, admin or read-only.
+  - API keys, admin or read-only. A key can be regenerated; the old one stops working at once.
   - UI sessions with CSRF protection and a login rate limit.
-  - Encrypted secret storage, with key rotation that re-encrypts everything.
+  - Encrypted secret storage, with key rotation that re-encrypts everything. This covers API keys, trigger tokens, target tokens, Arr API keys, notification URLs and Google OAuth client secrets and tokens; only the admin password is hashed.
+  - **Secrets are visible to the admin** *(decided 2026-10-30)*. Anyone who can see them already has admin access. Read-only API keys can't read any secret.
+    - Every stored secret (API keys, trigger tokens, Arr API keys, target tokens, notification URLs, the OAuth client secret) is masked in its dialog, with a **Reveal** button so the admin can check it is the right one.
+    - Lists don't show secrets; the API keys list has a **Copy** button per key.
 - **Observability:**
   - `tracing` logs with a level per component, with secrets redacted by type.
   - Prometheus `/metrics`.
@@ -51,8 +54,8 @@ Provide the foundation every module builds on. A component can be restarted when
    - trailing slashes
    - `..` rejected
    - overlapping rules rejected
-6. API keys work only with the correct scope. A wrong key gets 401, a read-only key on a write endpoint gets 403. Login is rate-limited.
-7. No log line, metric label or API response contains a secret (test that greps output under a seeded secret).
+6. API keys work only with the correct scope. A wrong key gets 401, a read-only key on a write endpoint gets 403, and a read-only key asking for any secret gets 403. A regenerated key replaces the old one immediately. Login is rate-limited.
+7. No log line, metric label or API response contains a secret (test that greps output under a seeded secret). The one exception is the admin-only endpoints that return a stored secret when it is asked for.
 8. Steady-state RSS with an empty configuration is ≤ 64 MB, and idle CPU is ≤ 1 % of one core.
 9. The UI shell passes the Playwright login test and has zero serious or critical axe violations.
 
