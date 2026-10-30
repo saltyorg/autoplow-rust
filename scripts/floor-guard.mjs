@@ -27,8 +27,11 @@ const top = git(['rev-parse', '--show-toplevel'])?.trim();
 if (!top) bail('not inside a git work tree');
 process.chdir(top);
 
-// Merge base; bail to exit 2 rather than pretending a shallow/rootless clone is clean.
-const mergeBase = git(['merge-base', base, 'HEAD'])?.trim();
+// Merge base; bail to exit 2 rather than pretending a shallow/rootless clone is clean. After a
+// history rewrite (force-push) the old head still exists but shares no ancestor with HEAD; diffing
+// against that commit's tree directly still shows exactly what the push changed.
+const commonBase = git(['merge-base', base, 'HEAD'])?.trim();
+const mergeBase = commonBase ?? git(['rev-parse', '--verify', '--quiet', base + '^{commit}'])?.trim();
 if (!mergeBase) bail('no merge base against ' + base);
 
 // Unified diff plus untracked files (git diff alone cannot see new files).
@@ -168,7 +171,11 @@ for (const r of removedRules) {
 // A gate-config change acknowledged with a `Gate-Change: <reason>` commit
 // trailer in the checked range is reported but does not block: the reason is
 // in history for review, so loosening stays loud without blocking tightening.
-const messages = git(['log', '--format=%B', mergeBase + '..HEAD']) ?? '';
+// After a rewrite, `base..HEAD` is the whole history, so only commits that are
+// not patch-identical to one in the old history may acknowledge.
+const messages = git(commonBase
+  ? ['log', '--format=%B', mergeBase + '..HEAD']
+  : ['log', '--format=%B', '--cherry-pick', '--right-only', mergeBase + '...HEAD']) ?? '';
 const acknowledged = /^Gate-Change: \S.*$/m.test(messages);
 if (acknowledged) {
   const gate = findings.filter((f) => f.rule === 'gate-config-changed');
