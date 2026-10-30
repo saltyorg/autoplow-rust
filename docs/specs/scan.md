@@ -62,6 +62,9 @@ Common to all triggers:
   - Target-level errors trigger exponential backoff for that target only, honouring `Retry-After`.
   - Per-path errors are retried with backoff.
   - The UI shows why each entry is waiting.
+- **Dead letters** *(added 2026-10-30)*: an entry that keeps failing for a path-level reason (for example "no library contains this path") is dead-lettered after N attempts and raises `item.deadlettered`. Target-level outages never dead-letter; those entries wait for the target.
+  - The UI offers **Retry** and **Discard** for each one, and **Discard all** per target.
+  - Dead letters are pruned automatically after 30 days (configurable).
 
 - **Post-delivery verification (optional, per target, off by default):** after delivery, query the target for the expected path (present for adds and changes, absent for deletes) within the target's known processing delay plus a margin. If the check fails, warn (for example "library folder not registered on the server, consider re-adding the library") instead of assuming success. This is motivated by the Jellyfin empty-folder and Plex disrupted-initial-scan findings.
 - **Server delays shown in the UI:** Jellyfin and Emby apply their own monitor delay before acting on `Media/Updated` (measured 60 s and 90 s).
@@ -98,6 +101,7 @@ Common to all triggers:
 10. Burst: 1 000 events/minute for 10 minutes are accepted without loss (no 5xx other than back-pressure 503 with `Retry-After`), and all resulting scans are delivered once targets accept them.
 11. Optional post-delivery verification flags a target that accepted a scan but never indexed the expected path within its delay + margin.
 12. Legacy autoscan `/triggers/{sonarr,radarr,lidarr,manual}`, A-Train and Bazarr (`/triggers/bazarr`, `/stats`, `/api/config-template`) requests recorded from those tools are accepted and produce the same scans.
+13. An entry failing for a path-level reason is dead-lettered after N attempts and can be retried or discarded (one at a time or all for a target); dead letters older than the pruning period are removed automatically. A target outage never dead-letters entries.
 
 ## Boundaries
 - **Always:** follow `CONSTRAINTS.md`; validate external input at the boundary.

@@ -141,9 +141,11 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** M.
 
 ### Task 1.2: Channels, subscriptions and UI
-- [ ] **AC (notifications AC4):**
+- [ ] **AC (notifications AC4–AC6):**
   - Discord, Apprise and webhook channels.
   - Subscriptions per event type.
+  - Disable a channel without backfill on re-enable.
+  - Undelivered: send again, discard, discard all; 30-day pruning.
   - UI page.
 - **V:** fake-endpoint tests; Playwright plus axe.
 - **Dep:** 1.1, 0.9.
@@ -264,10 +266,10 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** M.
 
 ### Task 4.2: Target workers and delivery
-- [ ] **AC (scan AC4, AC9):**
+- [ ] **AC (scan AC4, AC9, AC13):**
   - One isolated worker per target.
   - Backoff that honours `Retry-After`.
-  - Per-path dead-letter.
+  - Per-path dead-letter, with retry, discard, discard all and 30-day pruning.
   - Batching (Jellyfin/Emby), one request per folder (Plex).
 - **V:** an offline fake target doesn't block the others; a 400 dead-letters one path only.
 - **Dep:** 4.1, 2.2, 2.3.
