@@ -21,6 +21,17 @@ Run and supervise `rclone rcd` as a private child process, and give `upload`, `t
     - The minimum changes only in an Autoplow release, and that release's notes say so.
   - Readiness via `rc/noop`.
   - Restart with backoff.
+  - **Access:** the control socket is the only way in. Its folder is readable by the service's account alone, so no password is used.
+  - **Never orphaned** *(decided 2026-11-10)*: the child is tied to Autoplow, so it is killed if Autoplow dies for any reason. At start, a child left over from an earlier run is found and stopped before a new one starts. Two children never run at once.
+  - **Hung child:** `rc/noop` is called every 30 s while the child runs. Three missed answers in a row count as dead: the child is killed and restarted, and job state is reported lost.
+  - **Shutdown** *(decided 2026-11-10)*: when Autoplow stops, running transfers are stopped. Their files stay where they are and are queued again at the next start.
+  - **Its output** goes to Autoplow's log under the `rclone` component, at that component's level.
+- **Options** *(decided 2026-11-10)*:
+  - The admin can give extra command-line options and environment variables for the child (chunk sizes, API pacing, a config password, a user agent). Values that are secrets are stored like other secrets.
+  - Autoplow refuses the options it must control itself (the control socket, the config path, the bandwidth limit) and says why. Its own bandwidth limit always wins over one in the environment.
+- **The config file:**
+  - Autoplow never writes to `rclone.conf`. rclone itself saves refreshed tokens there, so the file must be writable by the service's account. Other rclone processes on the host (a mount) may use the same file.
+  - **Changes** *(decided 2026-11-10)*: Autoplow watches the file. When it changes, the child is restarted as soon as no transfer is running, and Settings › rclone says a restart is pending until then. **Reload** restarts it at once; running transfers are stopped and re-queued.
 - **Typed client for:**
   - `operations/movefile` and `copyfile`
   - `job/batch`, `job/status`, `job/stop`
@@ -41,11 +52,16 @@ Run and supervise `rclone rcd` as a private child process, and give `upload`, `t
 7. Autoplow's own SIGTERM shutdown completes even after the child performed partial-file copies, because rclone's atexit hook stays in the child.
 8. `decode` on a crypt-over-local remote returns the original names for a batch of encrypted paths, and reports which names couldn't be decrypted.
 9. With no upload destination and no crypt Drive monitor, no rclone child is started and no rclone health error is raised; adding a destination starts it without restarting Autoplow.
+10. Killing Autoplow (`SIGKILL`) leaves no rclone child running, and a child left over from an earlier run is stopped before a new one starts.
+11. A child that stops answering is killed and restarted within 2 minutes, and job state is reported lost.
+12. On shutdown, running transfers are stopped, their sources are intact, and they are queued again after restart.
+13. A remote added to `rclone.conf` is available after the child restarts when idle, without restarting Autoplow; Reload makes it available at once.
+14. An extra option Autoplow must control is refused with the reason; any other is passed to the child; a bandwidth limit in the environment does not override the throttle's.
 
 ## Boundaries
 - **Always:** follow `CONSTRAINTS.md`.
 - **Ask first:** changing the minimum rclone version (only in a release, with a release note).
-- **Never:** pass RC credentials on argv; expose RC on TCP; write to `rclone.conf`.
+- **Never:** pass a secret on the command line; expose the control socket on the network; write to `rclone.conf`; leave a child running without Autoplow.
 
 ## Open questions
 - Minimum supported rclone version (**decided 2026-10-27:** 1.75).

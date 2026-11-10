@@ -415,7 +415,8 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 ## Phase 5: `rclone`
 
 ### Task 5.1: Supervised `rcd` and RC client
-- [ ] **AC (rclone AC1–AC8):**
+- [ ] **AC (rclone AC1–AC8, AC10–AC12):**
+  - Child tied to Autoplow; leftovers stopped at start; hung child detected; transfers stopped and re-queued on shutdown; output in Autoplow's log.
   - Unix socket in a 0700 directory.
   - Minimum version 1.75, no maximum; configurable binary path; `rclone.unsupported` below the minimum.
   - Restart with "job state lost" reporting.
@@ -430,7 +431,9 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** M.
 
 ### Task 5.2: Start on demand and Settings › rclone
-- [ ] **AC (rclone AC9; ui AC10: Settings › rclone):**
+- [ ] **AC (rclone AC9, AC13, AC14; ui AC10: Settings › rclone):**
+  - Extra options and environment, with the controlled ones refused.
+  - Restart when idle after a config change; Reload.
   - The child runs only while a destination or a crypt Drive monitor needs it.
   - Settings › rclone: config path, version, state or "not needed", read-only remotes with users and health.
 - **V:** integration test: no child with nothing configured, started when a destination is added; Playwright plus axe.

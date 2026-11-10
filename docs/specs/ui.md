@@ -115,7 +115,7 @@ Every page and dialog in v1, the module that owns it, what it shows and does, an
 | Add target (dialog) | targets | Choose the server type; name, URL, token or Sign in with Plex; Test. | 4.9 |
 | **Settings › General** | core | Callback base URL and Autoplow's browser address; admin username, Change password (dialog), the sign-in switch with its warning, trusted proxies; time zone; scan timing defaults; how long things are kept; backups with Backup now; log levels per component; bootstrap status. | 0.10 |
 | **Settings › Anchors** | scan | Anchor files with what they hold and their state; dialog with the file picker, the targets, and an optional folder it is limited to. | 4.6 |
-| **Settings › rclone** | rclone | Config path; which rclone (the host's by default, or a given path); version against the minimum; running state, or "not needed" when nothing uses it; remotes, read-only, with who uses them and their health. | 5.2 |
+| **Settings › rclone** | rclone | Config path, with Reload and a note when a restart is pending; which rclone (the host's by default, or a given path); extra options and environment variables; version against the minimum; running state, or "not needed" when nothing uses it; remotes, read-only, with who uses them and their health. | 5.2 |
 | **Settings › Uploads** | upload | Global transfer cap, upload windows, fixing file dates. | 8.6 |
 | **Settings › Downloaders** | downloaders | Clients with what pauses and limits them and their state; dialog with URL, credentials, Test and pause conditions. | 7.3 |
 | **Settings › Library parity** | parity | When to check, automatic fixes per server, match language, what is compared. | 10.3 |

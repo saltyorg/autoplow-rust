@@ -46,7 +46,7 @@ admin:
 settings:
   callback_base_url: https://autoplow.example
 rclone:
-  config: /config/rclone/rclone.conf
+  config: ~/.config/rclone/rclone.conf
 targets:
   - name: plex
     type: plex
