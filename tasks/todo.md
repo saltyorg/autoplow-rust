@@ -702,28 +702,38 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 
 ## Phase 11: `track-preferences`
 
+### Task 11.0: Verify user tokens
+- [ ] **Spike:** against a pinned Plex version, verify how tokens are obtained for shared, managed and PIN-protected home users, and that a part write with a user's token changes only that user's selection. Record it as a platform note.
+- **V:** `live` test on a test library.
+- **Dep:** 2.2.
+- **Files:** `docs/platform-notes/`.
+- **Size:** S.
+
 ### Task 11.1: Matching algorithm
-- [ ] **AC (track-preferences AC3):** PAL's scoring plus forced/HI/VI semantics and tie-break, with the fixed cases.
+- [ ] **AC (track-preferences AC3, AC7):** PAL's scoring plus forced/HI/VI semantics and tie-break, with the fixed cases; no match leaves the episode unchanged.
 - **V:** port of PAL's tests plus new cases.
 - **Dep:** none (pure).
 - **Files:** `crates/track-preferences/src/matching.rs`.
 - **Size:** S.
 
 ### Task 11.2: Users, preferences, triggers, apply
-- [ ] **AC (track-preferences AC1, AC2, AC4, AC5):**
-  - Shared-server tokens, never logged.
-  - Preferences per (user, show).
-  - Play, new-episode and sweep triggers.
-  - Keyed serialisation.
-  - Verified writes.
-  - Opt-out per user.
+- [ ] **AC (track-preferences AC1, AC2, AC4–AC6, AC8–AC14):**
+  - Shared-server tokens, never logged; refresh on failure; users without a token skipped.
+  - Preferences per (user, show GUID), per Plex target.
+  - Recording: first play, then real changes only; a fallback is never recorded.
+  - Scope per target, library, show exclusion and the ignore label.
+  - Play, new-episode and sweep triggers, each switchable; the sweep limited to changed episodes.
+  - Keyed serialisation; writes in their own lane behind scans.
+  - Verified writes; correct episodes not written.
+  - Opt-out and scope override per user; preferences removed 30 days after access is lost.
+  - History of changes with retention.
 - **V:** fake Plex; `live` test on a test library.
-- **Dep:** 11.1, 2.2.
+- **Dep:** 11.0, 11.1, 2.2.
 - **Files:** `crates/track-preferences/src/{users,prefs,apply}.rs`.
 - **Size:** M.
 
 ### Task 11.3: Track preferences UI
-- [ ] **AC (ui AC10: Track preferences, User):** users with their dialog, preferences (edit and clear), scope settings.
+- [ ] **AC (ui AC10: Track preferences, User):** users with their dialog, preferences (edit and clear), excluded shows, where it applies, scope settings, Sweep with progress, and the history.
 - **V:** Playwright plus axe.
 - **Dep:** 11.2, 0.9.
 - **Files:** `crates/ui/src/pages/tracks.rs`.

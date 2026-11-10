@@ -100,7 +100,7 @@ Every page and dialog in v1, the module that owns it, what it shows and does, an
 | Limiter (dialog) | throttle | On or off, mode, and that mode's table or values. By-bitrate for rclone only. Says that Autoplow owns a client's limit. | 9.4 |
 | **Library parity** | parity | Findings table with type, title, server, Arr, what differs, suggested fix; filters including ignored and recently fixed; bulk fix, skip and ignore; Check. | 10.3 |
 | **Parity finding** | parity | Both sides compared, how the items were joined, exactly what the fix does, history; fix, skip, ignore; previous and next. | 10.3 |
-| **Track preferences** | track-preferences | Users with what is remembered and when it was last applied; one user's remembered choices with Clear; when to apply and the default scope; Sweep. | 11.3 |
+| **Track preferences** | track-preferences | Users with what is remembered and when it was last applied; one user's remembered choices with Clear; recent changes; where it applies (Plex targets, libraries, excluded shows, the ignore label); when to apply and the default scope; Sweep. | 11.3 |
 | User (dialog) | track-preferences | Included or opted out, scope override, Clear all. | 11.3 |
 | **Notifications** | notifications | Channels with state; which events go where; undelivered messages with Resend, Discard and Discard all per channel. | 1.2 |
 | Channel (dialog) | notifications | Enabled, name, URL, events grouped by category with All and None, one optional filter for the channel, Test; shows when the channel is failing and why. | 1.2 |
