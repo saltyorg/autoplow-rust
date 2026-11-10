@@ -14,10 +14,11 @@ Turn Google Drive changes (My Drive and shared drives) into scan events for the 
 2. They enter its client ID and secret in our UI. Each set is stored once as an **OAuth client**, with the secret encrypted, and can be reused for several Google accounts.
 3. They click **Connect**:
    - The browser goes through Google consent, requesting `drive.readonly` and offline access.
-   - Google redirects to `https://<our-ui>/api/v1/gdrive/oauth/callback` with a state parameter.
+   - Google redirects to `<Autoplow's browser address>/api/v1/gdrive/oauth/callback` with a state parameter. The address comes from the "Autoplow in your browser" setting, which must be set before connecting.
    - The refresh token is stored encrypted, and key rotation re-encrypts it too.
 4. The UI shows the exact redirect URI to register and checks that the request reached us on that URL. Saltbox domains provide HTTPS.
-5. Several Google accounts are supported. Their tokens are refreshed automatically, and a revoked or expired grant raises a `gdrive.account.revoked` notification.
+5. **The setup guide must cover publishing the OAuth app.** Left in Google's "testing" state, a sign-in expires after 7 days and monitors would stop every week. When a grant expires about a week after it was made, the `gdrive.account.revoked` message says that this is the likely cause.
+6. Several Google accounts are supported. Their tokens are refreshed automatically, and a revoked or expired grant raises a `gdrive.account.revoked` notification.
 
 ## Monitors
 - A monitor is (account, drive) where the drive is **My Drive** or a **shared drive**, chosen from a list fetched from the API.
@@ -25,7 +26,8 @@ Turn Google Drive changes (My Drive and shared drives) into scan events for the 
   - **Rewrite rules:** map Drive paths (`/<drive>/Media/TV/...`) to the canonical local path, usually the rclone mount, e.g. `/mnt/remote/<remote>/Media/TV/...`. They are scoped the same way as other triggers (no longest-match, no overlaps within a set).
   - **Include and exclude filters.**
   - **Polling interval:** default 1 minute, minimum 30 seconds.
-  - **Minimum age.**
+  - **Folders (optional)** *(decided 2026-11-10)*: one or more folders chosen with the Drive folder picker. Only those folders and what is under them are snapshotted and followed. Everything else in the drive is ignored without being stored. With none chosen, the whole drive is followed.
+  - **Minimum age:** default 2 minutes (see "Interaction with the rclone mount").
   - **Target excludes.**
   - **Crypt remote (optional):** the name of a crypt remote in the user's `rclone.conf` that wraps this drive (see below).
 
@@ -34,6 +36,10 @@ Based on the bernard and autoplow designs.
 1. **Initial snapshot:**
    - A full listing into `gdrive_snapshot_entries` (id, parents, name, mimeType, trashed).
    - Then the starting page token is recorded.
+   - The first snapshot produces **no scans**: it only records what is there.
+   - It runs as a long job with progress. Interrupted by a restart, it resumes from the last page it listed.
+   - **One snapshot per account and drive.** Monitors on the same drive share it; it covers the folders of all of them.
+   - **Not backed up:** a snapshot can always be rebuilt from Drive, so it is left out of database backups (see the core spec). It stays in the main database, because a change, its scans and the snapshot update are committed together. After a restore, the snapshot is rebuilt without producing scans and polling continues from the restored page token.
 2. **Each poll:**
    - Read `changes.list` from the stored token, including shared drives and items from all drives.
    - Resolve every change to its old and new paths through the snapshot tree.
@@ -47,7 +53,13 @@ Based on the bernard and autoplow designs.
    - Events are handed to the router **in the same transaction** that updates the snapshot.
    - The new page token is saved **only after** that commit, so a crash replays the changes and never loses them.
 5. **An invalid page token** causes a fresh snapshot, a diff against the old one, and a resume from there.
-6. **Rate limits and errors:**
+6. **Items that need a rule:**
+   - A shortcut is ignored; its target is followed where it really is.
+   - An item with more than one parent produces a scan for each mapped parent.
+   - An item restored from the trash counts as added.
+   - Google's own document types have no file on the mount and are ignored.
+7. **Losing access to a shared drive** stops the monitor with `gdrive.monitor.stopped`. The account is not treated as revoked.
+8. **Rate limits and errors:**
    - Rate-limited per account.
    - Exponential backoff that honours `Retry-After` and 403 `rateLimitExceeded`.
 
@@ -108,6 +120,12 @@ A read-only view of what the snapshot holds for a monitor:
 8. "Poll now" runs a poll immediately, within the rate limit. A paused monitor makes no API calls, stays paused after a daemon restart, and on resume processes the changes made while paused.
 9. "Rebuild snapshot" replaces the snapshot and emits events only for the differences.
 10. The snapshot browser finds entries by name or path and shows the total count; for crypt remotes it shows both names.
+11. A monitor limited to folders stores and follows only those subtrees; a change elsewhere in the drive is neither stored nor logged.
+12. The first snapshot queues no scan. Interrupted midway by a restart, it completes without starting over.
+13. Two monitors on one drive use a single snapshot.
+14. A database backup contains no snapshot entries; after restoring it, the monitor rebuilds its snapshot, queues no scans for existing content, and resumes polling.
+15. A shortcut and a Google document produce no scan; an item with two mapped parents produces a scan for each; an item restored from the trash produces an add.
+16. Losing access to a shared drive raises `gdrive.monitor.stopped` and not `gdrive.account.revoked`.
 
 ## Boundaries
 - **Always:** follow `CONSTRAINTS.md`; validate external input at the boundary.

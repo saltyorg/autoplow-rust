@@ -47,12 +47,12 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** S.
 
 ### Task 0.3: Store and migrations
-- [ ] **AC (core AC4, AC14–AC16):**
+- [ ] **AC (core AC4, AC14–AC16, gdrive AC14):**
   - SQLite in WAL mode, one writer and a reader pool.
   - Embedded, versioned migrations, with a copy taken first; a newer database is refused.
   - Compare-and-set helper.
   - Migration fixtures.
-  - Daily and on-demand backups with a keep count.
+  - Daily and on-demand backups with a keep count, leaving out rebuildable data (gdrive AC14).
   - Unwritable database: triggers get 503 with `Retry-After`; recovery without restart.
   - One instance per data directory.
 - **V:** migration-up tests; writer-serialisation test; read-only database test; second-instance test.
@@ -459,7 +459,10 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** M.
 
 ### Task 6.2: Drive monitors
-- [ ] **AC (gdrive AC2–AC5):**
+- [ ] **AC (gdrive AC2–AC5, AC11–AC13, AC15, AC16):**
+  - Folder-limited monitors; one snapshot per drive; first snapshot silent and resumable.
+  - Shortcuts, multiple parents, restored items and Google documents.
+  - Lost shared-drive access stops the monitor.
   - Snapshot plus Changes API.
   - Old and new paths.
   - Events committed before the token is saved.

@@ -109,7 +109,7 @@ Every page and dialog in v1, the module that owns it, what it shows and does, an
 | Add trigger (dialog) | scan | Choose Arr, webhook, local folders or Google Drive, then that type's fields. | 4.9 |
 | Add Arr instance (dialog, steps) | arr | Connect and detect; map root folders by suggestion or picker; preview of the managed webhook; review. | 3.4 |
 | **Google Drive trigger** | gdrive | State, Poll, Pause; settings summary; changes with outcome and filters; snapshot browser with Rebuild; sync log. | 6.4 |
-| Drive trigger settings (dialog) | gdrive | Account, drive, crypt remote, path mapping with pickers, polling, minimum age, filters. | 6.4 |
+| Drive trigger settings (dialog) | gdrive | Account, drive, the folders to follow (or the whole drive), crypt remote, path mapping with pickers, polling, minimum age, filters. | 6.4 |
 | **Targets** | targets, scan | Every target with server, libraries, path rules, queued, state. | 4.9 |
 | Target (dialog) | targets, scan | Enabled, and whether scans wait or are dropped while it is off; connection with Test, Sign in with Plex, and the certificate check; pacing and merging of many folders into their parent; path mappings with picker and "try a path"; anchors, and for Plex empty trash and merged-item handling. | 4.9 |
 | Add target (dialog) | targets | Choose the server type; name, URL, token or Sign in with Plex; Test. | 4.9 |
