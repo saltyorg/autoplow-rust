@@ -72,9 +72,9 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** M.
 
 ### Task 0.5: Config model and seed-once bootstrap
-- [ ] **AC (core-bootstrap-api AC1):**
+- [ ] **AC (core-bootstrap-api AC1, AC6):**
   - Typed resources.
-  - Strict YAML with line and column errors.
+  - Strict YAML with line and column errors; unknown version refused; a file other accounts can read refused.
   - Seed once; delete the file after success, keep it on partial failure.
   - Secret-free report.
   - JSON Schema generated.
@@ -98,11 +98,14 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** M.
 
 ### Task 0.7: Resource CRUD and `POST /apply`
-- [ ] **AC (core-bootstrap-api AC2, AC3):**
-  - `PUT`/`PATCH`/`DELETE` by name.
+- [ ] **AC (core-bootstrap-api AC2, AC3, AC7–AC9, AC11–AC13):**
+  - `PUT`/`PATCH`/`DELETE` by name; fixed IDs with rename; versions with `If-Match`; deletes refused with the list of dependents.
+  - Cursor paging with stable order.
+  - Long jobs: 202, progress, one at a time, interrupted on restart.
   - `apply` with `seed`/`upsert` and `dry_run`.
   - Changes notify the supervisor.
-- **V:** idempotency tests; a dry run makes no writes.
+  - Route table with its authentication matrix.
+- **V:** idempotency tests; a dry run makes no writes; rename, stale-version and in-use delete tests; paging under concurrent inserts; job tests; route authentication matrix.
 - **Dep:** 0.6, 0.4.
 - **Files:** `crates/core/src/api/resources.rs`, `crates/api-types/src/*.rs`.
 - **Size:** M.
@@ -120,9 +123,9 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** S.
 
 ### Task 0.9: UI shell (Leptos)
-- [ ] **AC (core AC9, core-bootstrap-api AC4, ui AC1–AC9):**
+- [ ] **AC (core AC9, core-bootstrap-api AC4, AC5, ui AC1–AC9):**
   - CSR app built with trunk and `wasm-opt -Oz`, embedded with rust-embed.
-  - Login, navigation, live event client, API client from `api-types`.
+  - Login, the first-start setup page, navigation, live event client, API client from `api-types`.
   - Shared building blocks from the UI spec: colour tokens, accent with the contrast rule, density, sidebar, width caps, dialog with unsaved-changes handling, secret field with eye toggle.
 - **V:** Playwright login test and UI-rule checks (sizes, widths, dialog close paths); zero serious or critical axe violations; WASM within budget.
 - **Dep:** 0.6, 0.8.
@@ -227,7 +230,8 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 ## Phase 3: `arr`
 
 ### Task 3.1: Arr client and detection
-- [ ] **AC (arr AC1):**
+- [ ] **AC (arr AC1, core-bootstrap-api AC10):**
+  - An Arr is one resource carrying its trigger settings; no separate trigger entry.
   - `system/status` detection of Sonarr v4/v5, Radarr, Lidarr, Whisparr v2/v3 and urlBase.
   - Root folders.
   - Filesystem API proxy for the path picker.

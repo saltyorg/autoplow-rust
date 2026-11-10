@@ -24,7 +24,7 @@ Talk to every Arr instance correctly: receive and parse their webhooks, and keep
 
    We also read `urlBase`.
 3. **Path mappings:** taken from `rootfolder`, then set up with the filesystem picker or evidence-based suggestions (see the scan spec).
-4. **Trigger:** each Arr instance gets its own trigger with **per-instance credentials** (a header token).
+4. **Trigger:** each Arr instance carries its own trigger settings with **per-instance credentials** (a header token). An Arr is one resource; there is no separate trigger entry for it (see the API spec, "Resource model").
 
 ## The managed connection
 | Field | Value |

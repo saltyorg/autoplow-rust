@@ -79,6 +79,9 @@ Module specs say *what* a page shows. This spec says *how* every page looks and 
   - **Closing:** Close, Cancel, Esc and a click outside all go through the same check. With unsaved edits they ask "Discard unsaved changes?", offering Keep editing or Discard.
   - **No nesting:** a dialog never opens another dialog. Pickers (folders, Drive folders) open inside the dialog.
   - **Destructive actions:** Delete and Revoke sit at the left of the footer, in the warning colour, and ask for confirmation.
+  - **Delete refused:** when something still uses the item, the dialog lists what does, each linking to it, and deletes nothing.
+  - **Changed elsewhere:** when a save is refused because the item changed since the dialog opened, the dialog says so and offers Reload. It never overwrites silently.
+- **Long jobs** (a snapshot rebuild, a full parity check, a backup): the button starts the job and the page shows it running with progress, then its result. It keeps running if the page is closed, and the button is disabled while it runs.
 
 ## Page inventory
 Every page and dialog in v1, the module that owns it, what it shows and does, and the task that builds it. A module spec defines the behaviour behind a page; this table defines what is on it. *(Added 2026-11-10.)*
@@ -86,6 +89,7 @@ Every page and dialog in v1, the module that owns it, what it shows and does, an
 | Page or dialog | Module | Shows and does | Task |
 |---|---|---|---|
 | **Sign in** | core | Username and password; the remaining tries and the wait after too many. | 0.9 |
+| **Setup** (first start only) | core | Shown while no admin exists: choose a username and password; asks for the setup token unless opened on the host itself. | 0.9 |
 | **Dashboard** | core | Tiles: scans delivered and queued, upload speed and volume, parity findings. Target states with a link to Health. The next scans with their wait reasons, running uploads, and the newest parity findings, each linking to its page. Scan button. | 12.1 |
 | **Health** | core | Needs attention first, each row linking to where it is fixed. Every background component with state, restarts and detail. Connections: targets, Arrs, rclone remotes, Google accounts, download clients. Recent health events. | 0.10 |
 | **Scans** | scan | The queue per target with each entry's wait reason and time, filters by target and reason, Send or Retry per entry. Dead letters with Edit, Retry, Discard and Discard all. | 4.4 |
