@@ -33,7 +33,7 @@ Keep other traffic from degrading playback: adapt rclone's upload bandwidth and 
   - A download client's download speed.
   - A download client's upload speed (torrent clients only).
 - Each limiter is switched on or off on its own and has **its own limits**. There is no shared budget: rclone and a seeding torrent client use the same upstream, and the user decides how much each may take.
-- The throttle works with any combination, including download clients only, with no upload destinations configured.
+- The throttle works with any combination, including download clients only, with no upload destinations configured. The rclone limiter is offered only while rclone is in use (see [the rclone spec](rclone.md)).
 - All limiters use the same session count and the same counting rules.
 
 ## Modes (one per limiter)

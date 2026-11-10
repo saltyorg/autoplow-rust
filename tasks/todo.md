@@ -123,6 +123,18 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Files:** `crates/ui/src/*.rs`, `crates/autoplow/src/embed.rs`, `e2e/login.spec.ts`, `e2e/ui-rules.spec.ts`.
 - **Size:** M.
 
+### Task 0.10: Health page and core Settings sections
+- [ ] **AC (ui AC10: Health, Settings › General, API keys, Appearance, About):**
+  - Health: needs attention, components, connections, recent health events. Connections and events fill in as modules land.
+  - General: callback base URL, admin and Change password, timing defaults, retention, bootstrap status.
+  - API keys: list with Copy; dialog to rename, change access, show, regenerate, revoke.
+  - Appearance: accent with the contrast check, density. About.
+  - Settings save as they change.
+- **V:** Playwright plus axe; WASM budget.
+- **Dep:** 0.9.
+- **Files:** `crates/ui/src/pages/{health,settings/*}.rs`.
+- **Size:** M.
+
 ### Checkpoint: core
 - [ ] Bootstrap seeds an admin user and an API key; `apply` is idempotent; the UI logs in.
 - [ ] Every later module's pages are added to `e2e/ui-rules.spec.ts` (ui AC4, AC5, AC9) as they land.
@@ -292,7 +304,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - [ ] **AC (scan AC1, AC5, AC8):**
   - Arr events produce folder scans, resolved to libraries by path components.
   - `POST /scans` with `dry_run` preview (rewrite, library, existence).
-  - Queue pages with wait reasons.
+  - Scans page with wait reasons and dead letters; the Scan dialog with its live preview (ui AC10).
 - **V:** API tests; Playwright plus axe.
 - **Dep:** 4.2, 4.3, 3.2.
 - **Files:** `crates/scan/src/triggers/arr.rs`, `crates/scan/src/api.rs`, `crates/ui/src/pages/queues.rs`.
@@ -313,9 +325,10 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
   - Anchors at any scope; all applicable anchors required.
   - Hold-and-retry existence check; deletes exempt.
   - Empty trash only after the scan is observed to complete.
+  - Settings › Anchors with its dialog (ui AC10).
 - **V:** paused-clock tests; `live` late-visibility test on Plex passes with the check and fails without it.
 - **Dep:** 4.2.
-- **Files:** `crates/scan/src/{anchors,exists,trash}.rs`.
+- **Files:** `crates/scan/src/{anchors,exists,trash}.rs`, `crates/ui/src/pages/settings/anchors.rs`.
 - **Size:** M.
 
 ### Task 4.7: Post-delivery verification
@@ -381,6 +394,15 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Files:** `crates/rclone/src/{child,client,jobs}.rs`.
 - **Size:** M.
 
+### Task 5.2: Start on demand and Settings › rclone
+- [ ] **AC (rclone AC9; ui AC10: Settings › rclone):**
+  - The child runs only while a destination or a crypt Drive monitor needs it.
+  - Settings › rclone: config path, version, state or "not needed", read-only remotes with users and health.
+- **V:** integration test: no child with nothing configured, started when a destination is added; Playwright plus axe.
+- **Dep:** 5.1, 0.10.
+- **Files:** `crates/rclone/src/demand.rs`, `crates/ui/src/pages/settings/rclone.rs`.
+- **Size:** S.
+
 ### Checkpoint: rclone
 - [ ] The `rcd` child survives `kill -9` and recovers; bandwidth changes apply live; human review.
 
@@ -391,9 +413,10 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
   - The user's own OAuth web client.
   - Connect and callback with state.
   - Encrypted tokens, included in rotation.
-  - Health on revocation.
-- **V:** fake OAuth server.
-- **Dep:** 0.6.
+  - `gdrive.account.revoked` on revocation.
+  - Settings › Google Drive: redirect URI check, OAuth clients and accounts with dialogs, setup guide (ui AC10).
+- **V:** fake OAuth server; Playwright plus axe.
+- **Dep:** 0.6, 0.10.
 - **Files:** `crates/gdrive/src/{oauth,accounts}.rs`.
 - **Size:** M.
 
@@ -526,7 +549,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** XS.
 
 ### Task 8.6: Upload UI
-- [ ] **AC:** destinations, queue with readiness reasons, live transfers, history, remote health.
+- [ ] **AC (ui AC10: Uploads, Destination, Settings › Uploads):** destinations with their dialog, queue with readiness reasons, live transfers with Hold and Stop, remote health, global upload settings.
 - **V:** Playwright plus axe; WASM budget.
 - **Dep:** 8.1–8.5, 0.9.
 - **Files:** `crates/ui/src/pages/uploads/*.rs`.
@@ -579,7 +602,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** S.
 
 ### Task 9.4: Throttle UI
-- [ ] **AC:** every limiter with its current limit and mode; sessions; options.
+- [ ] **AC (ui AC10: Throttle, Limiter):** every limiter with its current limit and mode, and its dialog; sessions; options.
 - **V:** Playwright plus axe.
 - **Dep:** 9.3, 0.9.
 - **Files:** `crates/ui/src/pages/throttle.rs`.
@@ -615,7 +638,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** M.
 
 ### Task 10.3: Parity UI
-- [ ] **AC:** runs, findings (fix, skip, ignore), filters, audit log.
+- [ ] **AC (ui AC10: Library parity, Parity finding, Settings › Library parity):** findings (fix, skip, ignore) with filters, the finding page with its history, and the parity settings.
 - **V:** Playwright plus axe.
 - **Dep:** 10.2, 0.9.
 - **Files:** `crates/ui/src/pages/parity.rs`.
@@ -647,7 +670,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** M.
 
 ### Task 11.3: Track preferences UI
-- [ ] **AC:** users, preferences (edit and clear), scope settings, history.
+- [ ] **AC (ui AC10: Track preferences, User):** users with their dialog, preferences (edit and clear), scope settings.
 - **V:** Playwright plus axe.
 - **Dep:** 11.2, 0.9.
 - **Files:** `crates/ui/src/pages/tracks.rs`.
@@ -658,7 +681,16 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 
 ## Phase 12: Release
 
-### Task 12.1: Container image and release pipeline
+### Task 12.1: Dashboard
+- [ ] **AC (ui AC10, Dashboard row):**
+  - Tiles, target states, next scans, running uploads and newest parity findings, each linking to its page.
+  - Live updates from the event stream.
+- **V:** Playwright plus axe; WASM budget.
+- **Dep:** 4.4, 8.6, 9.4, 10.3.
+- **Files:** `crates/ui/src/pages/dashboard.rs`.
+- **Size:** S.
+
+### Task 12.2: Container image and release pipeline
 - [ ] **AC:**
   - Static musl binaries for x86_64 and aarch64.
   - Image with a pinned rclone and `RCLONE_CONFIG` set.
@@ -670,12 +702,12 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Files:** `Dockerfile`, `.github/workflows/release.yml`.
 - **Size:** S.
 
-### Task 12.2: Replacement checklists and Saltbox integration notes
+### Task 12.3: Replacement checklists and Saltbox integration notes
 - [ ] **AC (project success criterion 3):**
   - A written checklist per replaced tool (autoscan/autopulse, cloudplow, matcharr, Plex-Auto-Languages), each verified by the live suite.
   - Example bootstrap for the Saltbox role.
 - **V:** walkthrough on a test Saltbox install.
-- **Dep:** 12.1.
+- **Dep:** 12.2.
 - **Files:** `docs/guides/*.md`.
 - **Size:** S.
 

@@ -15,7 +15,7 @@ Tell the admin about failures, health changes, parity findings and activity on t
 - **Generic webhook:** a JSON POST of `{events:[{type, category, timestamp, summary, details}]}` with optional headers.
 
 ## Event catalogue
-Each event belongs to a category. Users subscribe at the level of individual event types. *(Draft list.)*
+Each event belongs to a category. Users subscribe at the level of individual event types. These 25 types are the v1 catalogue *(final 2026-11-10)*.
 
 | Category | Event types |
 |---|---|
@@ -37,7 +37,7 @@ Notes on the health events *(added 2026-10-30)*:
 - **Queue:**
   - Each event is written to a durable `notification_outbox` table in the same transaction as the state change that caused it.
   - The dispatcher aggregates events per (channel, event type) over a window (default 10s) into one message.
-- **Retries:** exponential backoff that honours `Retry-After`. After N attempts the message is dead-lettered, and that is visible in the UI.
+- **Retries:** exponential backoff that honours `Retry-After`. After 8 attempts (configurable) the message is dead-lettered, and that is visible in the UI.
 - **Undelivered messages** *(added 2026-10-30)*:
   - The UI offers **Send again** and **Discard** for each one, and **Discard all** per channel.
   - They are pruned automatically after 30 days (configurable), so they can't pile up when nobody acts on them.
@@ -47,15 +47,15 @@ Notes on the health events *(added 2026-10-30)*:
 ## Acceptance criteria
 1. An event recorded in the same transaction as its state change is delivered after a restart even if the process crashed before sending.
 2. Events of the same type for the same target within the aggregation window produce one message.
-3. Discord rate limits and `Retry-After` are honoured; after N failed attempts the message is dead-lettered and visible in the UI.
+3. Discord rate limits and `Retry-After` are honoured; after 8 failed attempts the message is dead-lettered and visible in the UI.
 4. Subscriptions filter by event type per channel; unsubscribed types are never sent.
 5. An undelivered message can be sent again or discarded, one at a time or all for a channel; undelivered messages older than the pruning period are removed automatically.
 6. A disabled channel gets no new messages queued while it is off, and nothing is backfilled when it is switched back on.
 
 ## Boundaries
 - **Always:** follow `CONSTRAINTS.md`; validate external input at the boundary.
-- **Ask first:** Adding channels.
+- **Ask first:** Adding channels; adding or renaming an event type.
 - **Never:** Include secrets in notification bodies.
 
 ## Open questions
-- Final event catalogue (draft in this spec).
+- ~~Final event catalogue~~ (**decided 2026-11-10:** the 25 types above).

@@ -11,6 +11,7 @@ Run and supervise `rclone rcd` as a private child process, and give `upload`, `t
 - Mounting.
 
 ## Scope
+- **Started only when needed** *(decided 2026-11-10)*: the child runs while something uses it: an upload destination, or a Drive monitor with a crypt remote. With neither (for example an install that only limits download clients), it is not started, and a missing or too-old rclone is not an error.
 - **Child process:**
   - `rclone rcd` on a unix socket in a 0700 directory, with `--config <user rclone.conf>`.
   - A minimum version check.
@@ -35,6 +36,7 @@ Run and supervise `rclone rcd` as a private child process, and give `upload`, `t
 6. A bandwidth change via `core/bwlimit` applies to running transfers (verified in an integration test with a crypt-over-local remote).
 7. Autoplow's own SIGTERM shutdown completes even after the child performed partial-file copies, because rclone's atexit hook stays in the child.
 8. `decode` on a crypt-over-local remote returns the original names for a batch of encrypted paths, and reports which names couldn't be decrypted.
+9. With no upload destination and no crypt Drive monitor, no rclone child is started and no rclone health error is raised; adding a destination starts it without restarting Autoplow.
 
 ## Boundaries
 - **Always:** follow `CONSTRAINTS.md`.
