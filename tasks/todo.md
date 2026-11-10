@@ -508,7 +508,8 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** S.
 
 ### Task 7.2: Clients and the desired-state owner
-- [ ] **AC (downloaders AC1–AC3, AC5–AC8):**
+- [ ] **AC (downloaders AC1–AC3, AC5–AC11):**
+  - Only Autoplow's own pauses are undone; free-space margin; switching a client off.
   - SABnzbd, NZBGet and qBittorrent clients behind one trait.
   - Desired state per client from pause reasons and limits.
   - Apply at once; reconcile every minute.
@@ -534,7 +535,8 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 ## Phase 8: `upload`
 
 ### Task 8.1: Destinations and per-file queue
-- [ ] **AC (upload AC4–AC6):**
+- [ ] **AC (upload AC4–AC6, AC15–AC18, AC20):**
+  - Move or copy, removing empty folders; exclude patterns; first walk for files already there; failed list after 5 attempts; overlapping destinations refused.
   - Queue keyed by identity (dev, ino) plus path.
   - Tracking by job and group.
   - Source removed only after success.
@@ -545,7 +547,8 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** M.
 
 ### Task 8.2: Readiness: age, stability, mtime hygiene, hardlinks, scanned-first
-- [ ] **AC (upload AC1, AC9):**
+- [ ] **AC (upload AC1, AC9, AC14):**
+  - Scanned first, with the 30-minute limit; a disabled target is not waited for.
   - First-seen age (2 min) that restarts on an mtime change.
   - Two stability checks 30 s apart.
   - Future-mtime warning, or the opt-in fix.
@@ -570,7 +573,8 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** M.
 
 ### Task 8.4: Concurrency, failover, schedules
-- [ ] **AC (upload AC7, AC8, AC12, AC13):**
+- [ ] **AC (upload AC7, AC8, AC12, AC13, AC19):**
+  - Cooldown lengths: 24 h for a limit, growing for repeated failures.
   - Global cap plus per-remote caps.
   - Hold new uploads (persisted) and stop one or all transfers.
   - Remote-health cooldown.

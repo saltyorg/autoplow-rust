@@ -94,8 +94,8 @@ Every page and dialog in v1, the module that owns it, what it shows and does, an
 | **Health** | core | Needs attention first, each row linking to where it is fixed. Every background component with state, restarts and detail. Connections: targets, Arrs, rclone remotes, Google accounts, download clients. Recent health events. | 0.10 |
 | **Scans** | scan | The queue per target with each entry's wait reason and time, filters by target and reason, Send or Retry per entry. Dead letters with Edit, Retry, Discard and Discard all. Unmatched folders with their trigger. Delivered scans from the last 7 days on request. | 4.4 |
 | Scan (dialog) | scan | A folder with a picker; a live preview per target of the rewritten path, the library and whether the folder exists; "send now". | 4.4 |
-| **Uploads** | upload | Speed, volume, readiness checks, rclone state. Running transfers with Stop; Hold and Stop all. Files not ready yet with the reason and when they become eligible. Destinations with remote health. | 8.6 |
-| Destination (dialog) | upload | Name, local folder, ordered remotes with sub-path and per-remote cap, readiness rules, hardlink policy. | 8.6 |
+| **Uploads** | upload | Speed, volume, readiness checks, rclone state. Running transfers with Stop; Hold and Stop all. Files not ready yet with the reason and when they become eligible. Failed files with Retry and Discard. Destinations with remote health. | 8.6 |
+| Destination (dialog) | upload | Name, local folder, exclude patterns, ordered remotes with sub-path and per-remote cap, readiness rules with the scan wait, hardlink policy, move or copy, removing empty folders. | 8.6 |
 | **Throttle** | throttle | Active streams; every limiter with direction, mode, limit now, limit with no streams, and state; sessions with what counts; counting options. | 9.4 |
 | Limiter (dialog) | throttle | On or off, mode, and that mode's table or values. By-bitrate for rclone only. Says that Autoplow owns a client's limit. | 9.4 |
 | **Library parity** | parity | Findings table with type, title, server, Arr, what differs, suggested fix; filters including ignored and recently fixed; bulk fix, skip and ignore; Check. | 10.3 |
@@ -117,7 +117,7 @@ Every page and dialog in v1, the module that owns it, what it shows and does, an
 | **Settings › Anchors** | scan | Anchor files with what they hold and their state; dialog with the file picker, the targets, and an optional folder it is limited to. | 4.6 |
 | **Settings › rclone** | rclone | Config path, with Reload and a note when a restart is pending; which rclone (the host's by default, or a given path); extra options and environment variables; version against the minimum; running state, or "not needed" when nothing uses it; remotes, read-only, with who uses them and their health. | 5.2 |
 | **Settings › Uploads** | upload | Global transfer cap, upload windows, fixing file dates. | 8.6 |
-| **Settings › Downloaders** | downloaders | Clients with what pauses and limits them and their state; dialog with URL, credentials, Test and pause conditions. | 7.3 |
+| **Settings › Downloaders** | downloaders | Clients with what pauses and limits them and their state; dialog with Enabled, URL, credentials, Test, and pause conditions with the folder whose free space is watched. | 7.3 |
 | **Settings › Library parity** | parity | When to check, automatic fixes per server, match language, what is compared. | 10.3 |
 | **Settings › Google Drive** | gdrive | Redirect URI with its reachability check; OAuth clients and accounts, each with a dialog; setup guide. | 6.1 |
 | **Settings › API keys** | core | Keys with access level and Copy; dialog to rename, change access, show, regenerate, revoke; what each access level can do. | 0.10 |

@@ -16,6 +16,15 @@ This consolidates the upload decisions in the ADRs in [../decisions/](../decisio
 ## Model
 - **Unit of work:** uploads are **per file**. A file enters the upload queue from the local filesystem triggers (inotify, walk, or both) or from Arr import events.
 - **Destinations:** a destination maps a local path to an ordered list of remotes taken from the user's `rclone.conf`. Each remote can have a sub-path.
+  - Two destinations may not have overlapping local paths.
+  - **Exclude patterns** per destination keep files out of the queue (for example partial downloads). Symbolic links are never uploaded.
+  - **Files already there:** when a destination is added, and at every start, its local folder is walked so files that arrived earlier are queued too.
+  - **A file that disappears or is renamed** while queued is dropped from the queue without an error.
+- **After a successful upload** *(decided 2026-11-10)*, per destination:
+  - **Move** (default): the local file is removed once rclone confirms the upload.
+  - **Copy:** the local file stays and is remembered as uploaded, so it is not sent again unless it changes.
+  - **Empty folders:** with move, folders left empty by an upload are removed, up to but never including the destination's own local folder. On by default, switchable per destination.
+- **A file already at the destination** is left to rclone, which skips an identical file and replaces a different one *(decided 2026-11-10)*. Autoplow adds no rule of its own.
 - **Transport:** the supervised `rclone rcd` child, through the `rclone` module (ADR-0003). Each batch is its own job with its own stats group. Uploads are tracked by job and identity, never by file name.
 
 ## Readiness (all configurable per destination)
@@ -31,7 +40,8 @@ This consolidates the upload decisions in the ADRs in [../decisions/](../decisio
    - Optionally, the upload **waits while Plex, Jellyfin or Emby has the file open**.
    - This check reads other processes' open files. As the Saltbox user it sees that user's processes; seeing other users' needs a capability granted in the service unit. At start the check tests what it can see (core, "Capabilities per feature"). Where it can't work, the UI says that only the age and stability checks apply.
 4. **Scanned first**
-   - Our scan for that folder or identity must have been dispatched to the destination's targets.
+   - Our scan for that folder must have been sent to every enabled target whose libraries contain it. A folder no target contains passes at once.
+   - **Not forever** *(decided 2026-11-10)*: the upload waits for those scans for up to 30 minutes (configurable per destination), then goes ahead, and the file's row says it was not scanned first. A disabled target is never waited for.
 5. **Hardlinked files (`nlink > 1`)**
    - Per destination: upload normally (the UI shows "space not reclaimed"), or defer until the file has a single link.
 
@@ -52,9 +62,14 @@ This consolidates the upload decisions in the ADRs in [../decisions/](../decisio
 - **Failover:**
   - Decided by **remote health**.
   - A remote with repeated failures, or a quota or upload-limit error (for example exit code 7 semantics or `--drive-stop-on-upload-limit`), gets a cooldown.
+    - Upload limit or quota: 24 hours (configurable per remote).
+    - Five failures in a row: 15 minutes, doubling to at most 6 hours, reset by a success.
+  - When every remote of a destination is cooling down, its files wait and `remote.quota` or `remote.unhealthy` is raised.
   - During the cooldown, the destination's files go to its next remote.
 - **Retries:**
-  - Each file is retried with backoff.
+  - Each file is retried with backoff. After 5 attempts (configurable) it is marked failed, raises `upload.failed`, and is listed on the Uploads page with **Retry** and **Discard**. Discard only forgets the queue entry; the local file is untouched.
+- **Order:** the file that became ready first goes first.
+- **History:** finished uploads are kept for 30 days (configurable).
   - The source is never removed unless rclone reports success.
 - **Schedule windows:**
   - New transfers start only inside a window.
@@ -90,6 +105,13 @@ The clients themselves, and the guarantee that a paused client is always resumed
 11. Sustained 10 TB/day across remotes completes without Autoplow exceeding its resource budget (project.md).
 12. With "hold new uploads" on, no new transfer starts, transfers in flight complete, and the hold is still on after a daemon restart.
 13. Stopping a transfer (one or all) leaves the source intact and re-queues the file; nothing is left at the destination.
+14. A file whose scan cannot be sent uploads after the configured wait, marked as not scanned first; a disabled target causes no wait.
+15. With move, the local file is removed only after a confirmed upload and folders left empty are removed up to, not including, the destination's folder; with copy, the local file stays and is not uploaded again until it changes.
+16. A file matching an exclude pattern, and a symbolic link, are never queued; a file that vanishes while queued is dropped without an error.
+17. Files present in a destination's folder before it was added are queued by the first walk.
+18. A file that fails 5 times is marked failed, listed with Retry and Discard, and Discard leaves the local file in place.
+19. An upload-limit error cools the remote down for the configured time and five failures in a row for a growing time; with every remote cooling down, files wait and the matching event is raised.
+20. A destination whose local path overlaps another's is refused.
 
 ## Boundaries
 - **Always:** follow `CONSTRAINTS.md`; validate external input at the boundary.

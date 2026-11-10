@@ -19,6 +19,7 @@ Talk to the user's download clients and be the **single owner** of what Autoplow
 
 - Each client is added with a URL and its credentials (API key, or username and password). Credentials are stored encrypted, like every other secret.
 - Adding a client checks the connection and reads its version.
+- A client can be switched off without deleting it. Autoplow then leaves it completely alone, after putting back its idle limit and ending its own pause.
 - **Verification first:** each client's pause and speed-limit calls, their units, and how the client reports its current limit are verified against a pinned version and recorded in `docs/platform-notes/` before that client is implemented. This spec does not assume them.
 
 ## One owner, one desired state
@@ -31,6 +32,9 @@ Talk to the user's download clients and be the **single owner** of what Autoplow
 - **Apply:** a change is applied to the client at once.
 - **Reconcile:** runs periodically (default every minute) and compares the client's real state with the desired state. Any difference is corrected: a client restart, a manual change in the client's own UI, a missed call.
 - **Pause and limits together:** resuming a client never drops its limits. They are re-applied as part of the resume.
+- **Only Autoplow's own pauses are undone.** Autoplow remembers whether it paused a client. A client the admin paused in the client's own UI stays paused and is shown as "paused outside Autoplow"; a client that Autoplow paused and someone resumed is paused again while a pause reason is active.
+- **Free-space pause:** measured on a folder set per client (its download folder). It starts below the threshold and ends only once free space is back above the threshold plus a margin (10 % of the threshold by default), so it does not flip on and off.
+- **"Uploads are running" pause** ends after the upload queue has been idle for a grace period (default 5 minutes).
 
 ## Autoplow owns the speed limit
 *(decided 2026-11-10)*
@@ -60,6 +64,9 @@ Talk to the user's download clients and be the **single owner** of what Autoplow
 6. On clean shutdown, and when limit management is switched off or the client is removed, the idle limit is applied. After a simulated crash, the first reconcile corrects pause state and limits.
 7. A client that is unreachable raises `downloader.error`, is retried with backoff, and does not delay uploads or other clients.
 8. A detectable override (the client's alternative-speed mode or scheduler) is reported and never changed.
+9. A client paused in its own UI is not resumed by Autoplow; a client Autoplow paused is resumed when its last pause reason ends.
+10. The free-space pause starts below the threshold and ends only above the threshold plus its margin.
+11. A client switched off receives no further calls after its idle limit is restored and Autoplow's own pause is ended.
 
 ## Boundaries
 - **Always:** follow `CONSTRAINTS.md`; validate external input at the boundary.
