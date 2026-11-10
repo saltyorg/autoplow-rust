@@ -97,6 +97,8 @@ The detailed schema will be generated from the same Rust types the API uses, as 
   - `GET /parity/findings`
   - `POST /parity/findings/{id}/fix|skip|ignore`
   - `POST /arrs/{name}/reconcile`
+  - `POST /backups` (take one now); `GET /backups`
+  - `PUT /log-levels/{component}`
   - `POST /gdrive/monitors/{name}/poll|pause|resume|rebuild`; `GET /gdrive/monitors/{name}/changes|snapshot`
   - `POST /notifications/undelivered/{id}/resend`; `DELETE /notifications/undelivered[/{id}]`
   - `POST /downloaders/{name}/test`

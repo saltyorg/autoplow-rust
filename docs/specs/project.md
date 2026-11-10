@@ -11,7 +11,7 @@ Autoplow is a single daemon that keeps a Saltbox media stack consistent and movi
 
 **Users:**
 - **Primary:** Saltbox users, a single admin per install. Saltbox's Ansible role seeds the configuration once (ADR-0007), and the admin then uses the web UI and API.
-- **Secondary:** self-hosters running Plex/Jellyfin/Emby and the Arrs on Linux with Docker, outside Saltbox. Supported on a best-effort basis: same features, no Saltbox-specific defaults.
+- **Secondary:** self-hosters running Plex/Jellyfin/Emby and the Arrs on Linux, outside Saltbox. Supported on a best-effort basis: the same binary and service unit, no Saltbox-specific defaults.
 
 **v1 success** (the user story behind each item):
 1. **Replaces autoscan/autopulse.** Every trigger and target they support for Saltbox users works. That includes Arr webhooks, the legacy endpoints, Bazarr, the local filesystem and Drive, delivering to Plex, Jellyfin, Emby, Tdarr and another Autoplow, with no lost scans across restarts.
@@ -26,6 +26,7 @@ Autoplow is a single daemon that keeps a Saltbox media stack consistent and movi
 - autopulse-style item-refresh scanning
 - multi-user or RBAC administration
 - Windows or macOS hosts
+- a container image
 - a migration tool for importing cloudplow/autoscan config files (the webhook migration helper is a feature, not a v1 success criterion)
 
 **Scale targets** (a large home server; derived from a real install, with headroom):
@@ -46,7 +47,7 @@ Decided in ADR-0003 to ADR-0006 and ADR-0008:
 - **Storage:** rusqlite (bundled SQLite, WAL).
 - **UI:** Leptos (CSR, trunk), sharing an API-types crate with the backend.
 - **rclone:** a supervised `rclone rcd` child process.
-- **Targets:** Linux x86_64 and aarch64, as static musl binaries, plus a container image.
+- **Targets:** Linux x86_64 and aarch64, as static musl binaries with an example systemd unit. Autoplow runs on the host ([ADR-0018](../decisions/0018-host-service-deployment.md)); there is no container image in v1.
 
 ## Commands
 These are planned and wired in Task 0.1; `CONSTRAINTS.md` is canonical.

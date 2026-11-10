@@ -85,7 +85,7 @@ These come directly from the failures we saw in earlier projects.
   - **Readiness rules:**
     - A minimum age counted from first-seen, which restarts whenever mtime changes.
     - A stable size.
-    - Not open for writing. This check is optional and needs `pid: host` and `SYS_PTRACE`: `/proc` fds and write locks matched by dev+inode.
+    - Not open for writing. This check is optional and needs to read other processes' open files (it tests at start whether it can): `/proc` fds and write locks matched by dev+inode.
     - Scanned first.
     - A setting for hardlinked files.
     - See [specs/upload.md](specs/upload.md).
@@ -102,7 +102,7 @@ These come directly from the failures we saw in earlier projects.
   - Job state does not survive a restart, so unfinished uploads are re-queued from our database.
 - **Isolation:** rclone crashes, leaks and its SIGTERM/atexit hook stay in the child.
 - **Jobs:** completion is polled (`job/status`), and a periodic sweep removes finished stats groups.
-- **Versioning:** the rclone version is checked against a minimum. The container image ships a pinned rclone.
+- **Versioning:** the rclone version is checked against a minimum. Autoplow uses the rclone installed on the host ([ADR-0018](decisions/0018-host-service-deployment.md)).
 
 ### Throttle
 - **Session registry:** fed by push sources (Plex, Emby and Jellyfin websockets) and by pollers (Tofa). Each session source is counted exactly once.

@@ -28,6 +28,6 @@ Accepted (supersedes [ADR-0001](0001-embed-rclone-in-process.md))
 
 ## Consequences
 - A second process to supervise.
-- rclone versioning is independent of Autoplow: a minimum version is checked, and the container image ships a pinned rclone.
+- rclone versioning is independent of Autoplow: a minimum version is checked, and the container image ships a pinned rclone. *(Amended by [ADR-0018](0018-host-service-deployment.md): there is no container image; Autoplow uses the host's rclone.)*
 - No push-style job completion events. Polling about once a second is acceptable for uploads.
 - The implementation language is free (enables [ADR-0004](0004-rust-as-implementation-language.md)).

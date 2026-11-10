@@ -66,7 +66,7 @@ The detailed tasks, with acceptance criteria and verification, are in [todo.md](
 | 9 | `throttle` | Session registry; limiters for rclone and download clients |
 | 10 | `parity` | Engine, fixes, review UI |
 | 11 | `track-preferences` | Matching, per-user preferences, UI |
-| 12 | Release | Container, release pipeline, replacement checklists |
+| 12 | Release | Dashboard, binaries with a service unit, release pipeline, replacement checklists |
 
 Phases follow the approved build order in `docs/specs/README.md`. Every task traces to numbered acceptance criteria in its module spec.
 
@@ -85,7 +85,7 @@ A checkpoint after each phase requires: tests green, build clean, a demo of the 
 | rclone child crashes or misbehaves | Low | Supervision, health checks, re-queue from our database; the child is isolated from Autoplow. |
 | Jellyfin/Emby quirks (monitor delay; empty-folder libraries silently drop updates) | Med | Post-delivery verification, UI notes, target health warnings. |
 | Plex partial scans are lost when the path doesn't exist yet | Med | The "path must exist before delivery" check, with retry. |
-| Open-file detection needs `pid: host` and `SYS_PTRACE` | Med | Make it optional and degrade to the age and size-stable checks, with a UI notice. |
+| Open-file detection can't see processes of other users without an extra capability | Med | The check tests at start what it can see, and degrades to the age and size-stable checks with a UI notice. |
 | Tofa's API is in beta, lacks a library-roots endpoint and its websocket isn't documented | Med | Build the Tofa target last, behind capabilities. Verify against a running Tofa server. |
 | More hand-written clients (no Rust Drive/Arr/Plex libraries) | Med | Narrow typed clients per target, each with contract tests against recorded fixtures and live tests. |
 | Rust compile times on the shared host | Low | Capped builds (`systemd-run`), sccache, incremental debug builds. |

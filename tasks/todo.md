@@ -47,19 +47,23 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** S.
 
 ### Task 0.3: Store and migrations
-- [ ] **AC (core AC4):**
+- [ ] **AC (core AC4, AC14–AC16):**
   - SQLite in WAL mode, one writer and a reader pool.
-  - Embedded, versioned migrations.
+  - Embedded, versioned migrations, with a copy taken first; a newer database is refused.
   - Compare-and-set helper.
   - Migration fixtures.
-- **V:** migration-up tests; writer-serialisation test.
+  - Daily and on-demand backups with a keep count.
+  - Unwritable database: triggers get 503 with `Retry-After`; recovery without restart.
+  - One instance per data directory.
+- **V:** migration-up tests; writer-serialisation test; read-only database test; second-instance test.
 - **Dep:** 0.1.
 - **Files:** `crates/core/src/store/*.rs`, `crates/core/migrations/`.
 - **Size:** M.
 
 ### Task 0.4: Supervisor and component lifecycle
-- [ ] **AC (core AC1–AC3):**
-  - Restart with backoff, including after a panic, with the component named in the log.
+- [ ] **AC (core AC1–AC3, AC19):**
+  - Restart with backoff (1 s doubling to 60 s), including after a panic, with the component named in the log.
+  - Capability checks per feature, reported on Health (core AC19).
   - A config change rebuilds only the dependent components.
   - Shutdown within the deadline (30 s).
 - **V:** fake components and a paused clock.
@@ -80,13 +84,15 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** M.
 
 ### Task 0.6: HTTP server, auth and secrets
-- [ ] **AC (core AC6, AC7):**
-  - `/api/v1`, RFC 9457 errors, body limits, `/health`, OpenAPI.
-  - API keys (admin, read-only).
-  - Argon2 admin user, login rate limit.
-  - Encrypted secrets with full re-encryption on key rotation.
-  - Secrets never echoed.
-- **V:** auth matrix tests; a seeded-secret grep over logs and responses.
+- [ ] **AC (core AC6, AC7, AC10–AC13, AC17):**
+  - `/api/v1`, RFC 9457 errors, body limits, open `/health`, OpenAPI.
+  - API keys (admin, read-only); `/metrics` needs a key.
+  - Argon2 admin user; sessions (30 days, sign out, ended on password change); sign-in can be switched off for the UI only.
+  - Login lockout per client address, with trusted proxies.
+  - `autoplow reset-password`.
+  - Secret key from the environment only: refuse to start without it or with a wrong one; rotation with the old key supplied once.
+  - Secrets never in list or resource responses; the admin-only secret endpoint.
+- **V:** auth matrix tests; a seeded-secret grep over logs and responses; start-up tests for missing, wrong and rotated keys; lockout tests with and without a trusted proxy.
 - **Dep:** 0.5.
 - **Files:** `crates/core/src/{api,auth,secrets}/*.rs`.
 - **Size:** M.
@@ -102,8 +108,8 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** M.
 
 ### Task 0.8: Observability
-- [ ] **AC (core AC7, AC8):**
-  - `tracing` with a level per component.
+- [ ] **AC (core AC7, AC8, AC18):**
+  - `tracing` with a level per component, changeable while running; output to standard output and a self-rotating log file.
   - `secrecy`-typed secrets.
   - `/metrics`.
   - An SSE broker that never blocks a publisher.
@@ -126,7 +132,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 ### Task 0.10: Health page and core Settings sections
 - [ ] **AC (ui AC10: Health, Settings › General, API keys, Appearance, About):**
   - Health: needs attention, components, connections, recent health events. Connections and events fill in as modules land.
-  - General: callback base URL, admin and Change password, timing defaults, retention, bootstrap status.
+  - General: callback base URL, admin and Change password, sign-in switch, trusted proxies, time zone, timing defaults, retention, backups, log levels, bootstrap status.
   - API keys: list with Copy; dialog to rename, change access, show, regenerate, revoke.
   - Appearance: accent with the contrast check, density. About.
   - Settings save as they change.
@@ -520,7 +526,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
   - Capability detection.
   - `/proc` fd scan by dev+inode for local and mergerfs identities.
   - Write mode and locks only.
-  - Process and container attribution.
+  - Process attribution, and the container when there is one.
   - Media-server wait option.
   - Degraded-mode notice.
 - **V:** helper processes holding read, write and flock handles; cgroup fixtures.
@@ -690,16 +696,14 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Files:** `crates/ui/src/pages/dashboard.rs`.
 - **Size:** S.
 
-### Task 12.2: Container image and release pipeline
-- [ ] **AC:**
+### Task 12.2: Host service packaging and release pipeline
+- [ ] **AC (ADR-0018):**
   - Static musl binaries for x86_64 and aarch64.
-  - Image with a pinned rclone and `RCLONE_CONFIG` set.
-  - Optional `pid: host` and `SYS_PTRACE` documented.
-  - Healthcheck.
+  - An example systemd unit: Saltbox user, environment file for the secret key and listen address, the capabilities optional features need, each documented.
   - release-please releases.
-- **V:** image boots from a bootstrap file on a clean volume.
+- **V:** on a clean host the unit starts Autoplow from a bootstrap file; features report correctly with and without their capability.
 - **Dep:** all phases.
-- **Files:** `Dockerfile`, `.github/workflows/release.yml`.
+- **Files:** `packaging/autoplow.service`, `.github/workflows/release.yml`, `docs/guides/install.md`.
 - **Size:** S.
 
 ### Task 12.3: Replacement checklists and Saltbox integration notes

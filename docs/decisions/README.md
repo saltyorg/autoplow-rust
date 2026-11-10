@@ -6,7 +6,7 @@ Format: Status, Date, Context, Decision, Alternatives Considered, Consequences. 
 |---|---|---|
 | [0001](0001-embed-rclone-in-process.md) | Embed rclone in-process via librclone | Superseded by 0003 |
 | [0002](0002-go-as-implementation-language.md) | Go as implementation language | Superseded by 0004 |
-| [0003](0003-rclone-as-supervised-rcd.md) | Run rclone as a supervised `rclone rcd` child | Accepted |
+| [0003](0003-rclone-as-supervised-rcd.md) | Run rclone as a supervised `rclone rcd` child | Accepted (amended by 0018) |
 | [0004](0004-rust-as-implementation-language.md) | Rust as implementation language | Accepted |
 | [0005](0005-aggressive-quality-policy.md) | Aggressive compiler, lint and CI policy | Accepted |
 | [0006](0006-leptos-for-the-web-ui.md) | Leptos (client-side WASM) for the web UI | Accepted |
@@ -21,3 +21,4 @@ Format: Status, Date, Context, Decision, Alternatives Considered, Consequences. 
 | [0015](0015-public-documentation-rules.md) | Public documentation rules | Accepted |
 | [0016](0016-console-ui-direction.md) | Console visual direction and UI rules | Accepted |
 | [0017](0017-download-clients-module-and-stream-aware-limits.md) | Download clients as their own module, limited by stream activity | Accepted |
+| [0018](0018-host-service-deployment.md) | Autoplow runs as a service on the host | Accepted |

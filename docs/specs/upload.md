@@ -27,9 +27,9 @@ This consolidates the upload decisions in the ADRs in [../decisions/](../decisio
    - Write-mode opens and write locks block the upload. Read-only opens never do.
    - A file is matched by dev+inode on both its `/mnt/local` identity and its mergerfs identity.
    - Long-stable hardlinked files held read-write by rTorrent or mergerfs are let through after a configurable window.
-   - The process holding the file, and its container, are identified.
+   - The process holding the file is identified, and its container when it runs in one.
    - Optionally, the upload **waits while Plex, Jellyfin or Emby has the file open**.
-   - This check needs `pid: host` and `SYS_PTRACE`. Without them, the UI notes that only the age and stability checks apply.
+   - This check reads other processes' open files. As the Saltbox user it sees that user's processes; seeing other users' needs a capability granted in the service unit. At start the check tests what it can see (core, "Capabilities per feature"). Where it can't work, the UI says that only the age and stability checks apply.
 4. **Scanned first**
    - Our scan for that folder or identity must have been dispatched to the destination's targets.
 5. **Hardlinked files (`nlink > 1`)**
@@ -79,7 +79,7 @@ The clients themselves, and the guarantee that a paused client is always resumed
 ## Acceptance criteria
 1. A file becomes eligible only after its readiness rules pass; any mtime change restarts its age clock.
 2. A file held open for writing (or write-locked) by any process is not uploaded while the optional open-file check is active; a read-only open (e.g. a seeding torrent client, Plex) does not block.
-3. Without `pid: host`/`SYS_PTRACE`, the UI states that only age and stability checks apply; uploads still work.
+3. When the open-file check can't see the processes it needs, it reports itself as off, the UI states that only age and stability checks apply, and uploads still work.
 4. Two files with identical basenames in different folders in one batch are tracked and completed independently.
 5. The source file is removed only after rclone reports the transfer successful; a cancelled or failed transfer leaves the source intact and the entry retried with backoff.
 6. Killing the rclone child mid-transfer leads to restart and re-queue; the file is uploaded exactly once after recovery.
