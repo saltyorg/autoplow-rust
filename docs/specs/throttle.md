@@ -20,11 +20,29 @@ Keep other traffic from degrading playback: adapt rclone's upload bandwidth and 
   - Any target configured for polling.
 - **Counting rules:**
   - Each target's sessions are counted **once**. autoplow counted them twice.
-  - A session registry keeps the latest state of each session and expires stale ones.
+  - A session registry keeps the latest state of each session. A session with no update for 2 minutes is dropped.
 
 ## Counting
 - Paused sessions are never counted.
-- Excluding LAN streams is optional. The UI explains that it only helps when the NIC/LAN is faster than the WAN upstream.
+- **What counts** *(decided 2026-11-10)*: films, episodes and live TV. Music, photos and trailers do not count by default; each kind can be switched on. In by-bitrate mode a counted stream contributes its own bitrate.
+- Excluding LAN streams is optional. Whether a stream is local comes from the media server's own report for that session. The UI explains that it only helps when the NIC/LAN is faster than the WAN upstream.
+- **A server that can't be read** *(decided 2026-11-10)* counts as zero streams at once: a server that is down is not streaming. The Throttle page says its count is assumed.
+
+## Units
+- **Limits** are bytes per second, written the way rclone writes them: `80M` is 80 MiB/s. The UI shows them as MB/s.
+- **Stream bitrates** are bits per second (Mbit/s), as media servers report them.
+- By-bitrate mode converts between the two explicitly (8 bits to the byte). Every mixed calculation is covered by a test.
+- The lowest limit that can be set is 100 kB/s. Stopping is done by pausing or holding, never by a limit of zero.
+
+## Settling
+- A change that **lowers** a limit is applied at once.
+- A change that **raises** a limit is applied only after the stream count has stayed at the lower level for 30 seconds (configurable), so someone pausing and resuming does not cause a burst of changes.
+
+## Manual override
+*(decided 2026-11-10)*
+- From the Throttle page the admin can set "no limits" or one fixed limit, for 1 hour, until the next morning, or until switched off.
+- While it is on, it replaces every limiter's own result, the page shows it prominently with the time left, and it ends by itself.
+- It is persisted, so it survives a restart for the time it has left.
 
 ## What gets limited
 *(added 2026-11-10)*
@@ -41,7 +59,7 @@ Keep other traffic from degrading playback: adapt rclone's upload bandwidth and 
 |---|---|---|
 | Tiers | A user table mapping stream count to a limit (for example 0 → unlimited, 1 → 80M, 3 → 40M, 6+ → 10M) | every limiter |
 | Per stream | `max − n × reserve`, with a floor | every limiter |
-| By bitrate | `total upstream − Σ min(stream bitrate, cap, media bitrate) × (1 + headroom)`, with a floor | rclone upload only |
+| By bitrate | `total upstream − Σ min(stream bitrate, cap, media bitrate) × (1 + headroom)`, with a floor. Headroom defaults to 20 %. | rclone upload only |
 
 - **The limit with no streams** is part of the mode: the 0 row of a tiers table, or `max` in per-stream mode. For a download client this is its idle limit (see [the downloaders spec](downloaders.md)).
 
@@ -68,6 +86,11 @@ Keep other traffic from degrading playback: adapt rclone's upload bandwidth and 
 8. Two limiters with different tables produce different limits from the same session set; changing one limiter's table does not change the other's result.
 9. A download client's limit request is handed to `downloaders` within 5 s of the session change, and an unreachable client does not delay the rclone limit.
 10. By-bitrate cannot be selected for a download-client limiter (rejected by the API with a field error).
+11. A music stream does not change any limit by default; with music switched on, it counts.
+12. When a server becomes unreadable its streams stop counting at once, and the page marks that server's count as assumed.
+13. A limit is lowered within 5 s of a stream starting, and raised only after the count has stayed lower for the settling time; a pause followed by a resume within that time causes no change.
+14. A manual override replaces every limiter's result for its duration, ends by itself, and is still in force after a restart within that time.
+15. By-bitrate results match hand-calculated values for a table mixing Mbit/s bitrates and MiB/s limits; a limit below 100 kB/s is refused.
 
 ## Boundaries
 - **Always:** follow `CONSTRAINTS.md`; validate external input at the boundary.

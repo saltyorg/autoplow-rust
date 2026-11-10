@@ -615,7 +615,8 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 ## Phase 9: `throttle`
 
 ### Task 9.1: Session registry
-- [ ] **AC (throttle AC1, AC2):**
+- [ ] **AC (throttle AC1, AC2, AC11, AC12):**
+  - Which kinds of playback count; an unreadable server counts as zero; sessions dropped after 2 minutes without an update.
   - Plex, Jellyfin and Emby websockets, plus Tofa polling.
   - Each server counted once.
   - Paused sessions excluded; LAN optional.
@@ -626,7 +627,8 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** M.
 
 ### Task 9.2: Policy modes and the rclone limiter
-- [ ] **AC (throttle AC3–AC6):**
+- [ ] **AC (throttle AC3–AC6, AC13–AC15):**
+  - Units and conversion; settling before a limit is raised; timed manual override, persisted.
   - Tiers, per stream, by bitrate (cap 200 Mbps plus media bitrate).
   - Limit applied within 5 s.
   - Optional "no new transfers above N streams".

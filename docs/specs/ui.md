@@ -96,7 +96,7 @@ Every page and dialog in v1, the module that owns it, what it shows and does, an
 | Scan (dialog) | scan | A folder with a picker; a live preview per target of the rewritten path, the library and whether the folder exists; "send now". | 4.4 |
 | **Uploads** | upload | Speed, volume, readiness checks, rclone state. Running transfers with Stop; Hold and Stop all. Files not ready yet with the reason and when they become eligible. Failed files with Retry and Discard. Destinations with remote health. | 8.6 |
 | Destination (dialog) | upload | Name, local folder, exclude patterns, ordered remotes with sub-path and per-remote cap, readiness rules with the scan wait, hardlink policy, move or copy, removing empty folders. | 8.6 |
-| **Throttle** | throttle | Active streams; every limiter with direction, mode, limit now, limit with no streams, and state; sessions with what counts; counting options. | 9.4 |
+| **Throttle** | throttle | Active streams; a manual override with its time left; every limiter with direction, mode, limit now, limit with no streams, and state; sessions with what counts and which server counts are assumed; counting options, including which kinds of playback count. | 9.4 |
 | Limiter (dialog) | throttle | On or off, mode, and that mode's table or values. By-bitrate for rclone only. Says that Autoplow owns a client's limit. | 9.4 |
 | **Library parity** | parity | Findings table with type, title, server, Arr, what differs, suggested fix; filters including ignored and recently fixed; bulk fix, skip and ignore; Check. | 10.3 |
 | **Parity finding** | parity | Both sides compared, how the items were joined, exactly what the fix does, history; fix, skip, ignore; previous and next. | 10.3 |
