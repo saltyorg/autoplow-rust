@@ -19,6 +19,8 @@ Turn Google Drive changes (My Drive and shared drives) into scan events for the 
 4. The UI shows the exact redirect URI to register and checks that the request reached us on that URL. Saltbox domains provide HTTPS.
 5. **The setup guide must cover publishing the OAuth app.** Left in Google's "testing" state, a sign-in expires after 7 days and monitors would stop every week. When a grant expires about a week after it was made, the `gdrive.account.revoked` message says that this is the likely cause.
 6. Several Google accounts are supported. Their tokens are refreshed automatically, and a revoked or expired grant raises a `gdrive.account.revoked` notification.
+- **The sign-in round trip** *(security review, 2026-11-10)*: the state value is used once, lasts 10 minutes, and is tied to the browser that started it. The callback page shows nothing from the request and returns to a fixed page in the UI. Deleting an account also withdraws Autoplow's access at Google.
+- **Scope:** read-only access to file details is enough for following changes. The crypt spike also records whether Google's narrower metadata-only scope works for shared drives; if it does, that scope is used.
 
 ## Monitors
 - A monitor is (account, drive) where the drive is **My Drive** or a **shared drive**, chosen from a list fetched from the API.
@@ -34,8 +36,8 @@ Turn Google Drive changes (My Drive and shared drives) into scan events for the 
 ## Change tracking
 Based on the bernard and autoplow designs.
 1. **Initial snapshot:**
+   - The starting page token is taken **before** the listing begins, so changes made while it runs are replayed afterwards and none are lost.
    - A full listing into `gdrive_snapshot_entries` (id, parents, name, mimeType, trashed).
-   - Then the starting page token is recorded.
    - The first snapshot produces **no scans**: it only records what is there.
    - It runs as a long job with progress. Interrupted by a restart, it resumes from the last page it listed.
    - **One snapshot per account and drive.** Monitors on the same drive share it; it covers the folders of all of them.
@@ -73,6 +75,7 @@ When the monitored folder holds an rclone crypt remote, the Drive API only sees 
   - A name that can't be decrypted (a file that isn't part of the crypt remote, or a wrong password) isn't mapped. It's recorded in the change log as "couldn't decrypt", and no scan is produced.
   - If the crypt remote is missing from `rclone.conf`, or most names in the first snapshot fail to decrypt, the monitor stops with a `gdrive.monitor.stopped` notification instead of mapping garbage.
 - **Spike required:** before the design is final, verify against rclone 1.75 that `decode` through `rc` handles full paths, directory-name encryption on and off, every filename encoding, and batches large enough for a full snapshot.
+- **When names cannot be decoded right now** (rclone is restarting, hung or unsupported): the monitor waits and keeps its place. It does not log the changes as undecryptable and move on.
 
 ## Change log
 Every change the monitor reads is recorded, with what Autoplow did about it, so the UI can list recent changes.
@@ -131,6 +134,9 @@ These are the notification types this module raises (the catalogue is in [notifi
 14. A database backup contains no snapshot entries; after restoring it, the monitor rebuilds its snapshot, queues no scans for existing content, and resumes polling.
 15. A shortcut and a Google document produce no scan; an item with two mapped parents produces a scan for each; an item restored from the trash produces an add.
 16. Losing access to a shared drive raises `gdrive.monitor.stopped` and not `gdrive.account.revoked`.
+17. A change made in an already-listed folder while the first snapshot is still running is applied once the snapshot is done.
+18. While rclone cannot decode names, the monitor does not advance and no change is logged as undecryptable; it continues when rclone is back.
+19. A sign-in state value is refused when used twice, after 10 minutes, or from another browser.
 
 ## Boundaries
 - **Always:** follow `CONSTRAINTS.md`; validate external input at the boundary.

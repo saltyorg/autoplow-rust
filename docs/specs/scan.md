@@ -9,6 +9,12 @@ Turn every change signal (Arr events, legacy/Bazarr/generic webhooks, local file
 - Item metadata refresh/analyze (autopulse style; ADR-0009)
 - Waiting for Plex analysis before upload
 - Scanning library roots by default
+- Path mappings written as regular expressions; mappings are folder prefixes *(decided 2026-11-10)*
+- Extra, custom-named trigger addresses such as `/triggers/sonarr4k`; hand-made webhooks are re-pointed once *(decided 2026-11-10)*
+- A target that runs a program per path, and targets or triggers for Sonarr/Radarr refresh, FileFlows, Sportarr and Readarr
+- Forwarding scans to an old autoscan
+- Checking a file's hash before sending
+- Priorities between triggers
 
 This consolidates the scan decisions in the ADRs in [../decisions/](../decisions/README.md). The architecture is described in [../architecture.md](../architecture.md).
 
@@ -39,6 +45,8 @@ Common to all triggers:
 - **Ignore patterns** (for example partial downloads) are set per trigger.
 - **Watch limit:** a large library can exceed the kernel's limit on watches. When that happens, the trigger keeps the watches it has, covers the rest by walking, and shows on the Health page how to raise the limit. It does not fail.
 - **Walks** run on the trigger's interval and report only what changed since the last walk.
+- **While an anchor is missing,** a walk does not report the files under it as deleted, and deletes already seen for that folder during the outage are discarded when the anchor returns.
+- **Events that cannot be stored** (the database is unwritable, or the backlog is full): file events are kept in memory up to a limit, then dropped with a count on the Health page; the next walk finds what was missed. With walking switched off, that is said on the trigger.
 
 ## Paths
 - Rewrite rule sets exist at three scopes: per trigger, per target, and per trigger→target pair. A pair's own set replaces the target's set *(decided 2026-10-27)*.
@@ -58,7 +66,13 @@ Common to all triggers:
 6. **Never lost:** an event that arrives after dispatch bumps the generation, so the entry stays queued and another scan follows.
 
 ## Delivery
-- **Path must exist (optional):** per trigger and per target. Add and change entries are held until the folder exists. Deletes are exempt.
+- **Scans and uploads** *(decided 2026-11-10)*: for a folder under an upload destination, when a scan is sent depends on where the file is and on what the target can see (see the targets spec).
+  - **File still local, target on the same system:** sent after the normal wait. The upload waits for it.
+  - **Target elsewhere:** the scan waits until the file's upload has finished, then that target's propagation delay. If uploads are switched off or the folder is under no destination, it is sent after the normal wait.
+  - **File already uploaded, target on the same system:** the scan waits until the file is visible again at the path the target uses, for at most the mount's propagation delay (default 5 minutes, set per destination), then is sent anyway.
+  - The wait reason says which of these applies.
+  - **Autoplow's own moves are not events.** A file removed locally because Autoplow uploaded it raises no delete, from any trigger watching that folder.
+- **Path must exist (optional):** per trigger and per target, for same-system targets only. Add and change entries are held until the folder exists. Deletes are exempt.
   - The check is made on the host, at the path as Autoplow sees it. Autoplow cannot look inside a media server.
   - It is retried with growing gaps for up to 1 hour (configurable). After that the entry becomes a dead letter saying the folder never appeared *(decided 2026-11-10)*.
 - **Deletes** *(decided 2026-11-10)*: a deleted **folder** scans the path that was removed, not its parent, so removing a whole show or movie directly under a library root does not need a root scan. A deleted **file** scans its parent folder, like any other file event.
@@ -83,6 +97,10 @@ Common to all triggers:
 
 - **Post-delivery verification (optional, per target, off by default):** after delivery, query the target for the expected path (present for adds and changes, absent for deletes) within the target's known processing delay plus a margin. If the check fails, warn (for example "library folder not registered on the server, consider re-adding the library") instead of assuming success. This is motivated by the Jellyfin empty-folder and Plex disrupted-initial-scan findings.
 - **Server delays shown in the UI:** Jellyfin and Emby apply their own monitor delay before acting on `Media/Updated` (measured 60 s and 90 s).
+- **Which wait wins:** an entry held for a missing anchor, or for a target that is disabled or backing off, shows that reason, and the "path must exist" hour does not run meanwhile.
+- **Deletes and adds in one entry:** it is sent as a delete if every event in it was a delete, otherwise as an add. The existence check applies only to adds; Plex empty trash runs if any event in it was a delete.
+- **When a path mapping or a library changes,** waiting entries are resolved again. An unmatched folder is kept for 7 days and can be retried from the Scans page once the mapping is fixed.
+- **Several triggers feeding one entry:** the longest minimum age among them applies.
 
 ## Targets
 | Target | Scan call | Extras |
@@ -91,7 +109,7 @@ Common to all triggers:
 | Emby / Jellyfin | `POST /Library/Media/Updated` (batched) | |
 | Tofa | `POST /api/v1/libraries/{id}/scan/scoped {paths}` (batched) | Completion status is available from `/scan/status`. |
 | Tdarr | `POST /api/v2/scan-files` | |
-| Another autoplow | Our own generic webhook, or the API | |
+| Another autoplow | Its generic webhook, with a trigger token. Never its API, so no admin key of another install is stored. | |
 
 ## UI and API extras
 - **Manual-add preview:** shows the rewrite per target, the library it resolves to, and whether the path exists.
@@ -131,6 +149,11 @@ These are the notification types this module raises (the catalogue is in [notifi
 19. A folder that matches no library is not queued and appears in the unmatched list with its trigger.
 20. When the watch limit is reached, the local trigger keeps working by walking and the Health page says so; a file still being written produces no event until it is closed.
 21. A generic webhook with `type: delete` queues a delete that skips the existence check.
+22. For a folder under an upload destination: a same-system target is scanned after the normal wait while the file is local; a target elsewhere is scanned only after the upload has finished and its propagation delay has passed; a same-system target whose file was already uploaded is scanned when the file is visible again or after the mount's delay, whichever is first. Each case shows its own wait reason.
+23. A file removed locally by Autoplow's own move produces no delete event from any trigger.
+24. While an anchor is missing, a walk reports no deletes under it, and the "path must exist" hour does not run for entries held by an anchor or by their target.
+25. An entry holding a delete and an add is sent as an add, with empty trash afterwards on Plex.
+26. A trigger body above 1 MB or naming more than 1000 paths is refused, and one trigger filling its own backlog share does not cause 503 for another.
 
 ## Boundaries
 - **Always:** follow `CONSTRAINTS.md`; validate external input at the boundary.

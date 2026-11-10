@@ -84,6 +84,12 @@ Based on autoplow's phased approach, with fixes.
 - **Resolved:** a finding that was fixed, or that a later run no longer finds, is marked resolved and kept for 7 days (configurable).
 - **Notifications:** `parity.mismatch.found` is raised only for findings that are new since the previous run, and many at once are summarised (see the notifications spec).
 
+## When a check cannot finish
+- A pair is checked only if both sides were listed completely. If a server or an Arr is unreachable, or a listing fails part-way, that pair is abandoned for this run: no finding is created, resolved or notified, and the run's result says which pairs were skipped and why.
+- A disabled target is not checked.
+- A run cut off by a restart counts for nothing: the next run compares against the last complete one. A fix cut off before its read-back is verified at the next start.
+- **After-import checks** are grouped per item: many imports for one show make one check, started from the last scan delivered for it. They wait while a full check runs, and none is made for a scan that was dropped or dead-lettered.
+
 ## Merged items (Plex)
 - These are items whose locations span different item folders.
 - **Options:**
@@ -113,6 +119,8 @@ These are the notification types this module raises (the catalogue is in [notifi
 12. Only findings new since the previous run raise `parity.mismatch.found`.
 13. Extras and additional versions on the server, and Arr entries without a file, produce no finding.
 14. A second full check started while one runs is refused with the running job.
+15. A pair whose server or Arr could not be listed completely gets no new, resolved or notified finding in that run, and the run names it as skipped.
+16. Many imports of one show within the after-import delay produce one check, and none starts while a full check runs.
 
 ## Boundaries
 - **Always:** follow `CONSTRAINTS.md`; validate external input at the boundary.

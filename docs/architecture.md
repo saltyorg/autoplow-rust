@@ -158,7 +158,7 @@ These come directly from the failures we saw in earlier projects.
   - resources are addressed by stable **names** (`PUT /api/v1/targets/{name}` is an idempotent upsert), which suits Ansible
   - the UI uses the same API
 - **Authentication:**
-  - API keys sent as `Authorization: Bearer`, scoped to admin or webhook use
+  - API keys sent as `Authorization: Bearer`, scoped to admin, read-only or metrics
   - UI sessions with CSRF protection and a login rate limit
   - webhooks use a per-trigger token in a header
 - **Secrets:** encrypted at rest, with key rotation that re-encrypts **everything**. autoplow's rotation missed its Google Drive tokens.

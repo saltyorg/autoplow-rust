@@ -36,6 +36,13 @@ Provide the foundation every module builds on. A component can be restarted when
   - **Backups** *(decided 2026-11-10)*: a failed backup raises `backup.failed`. A consistent copy daily, keeping the last 7 (both configurable), plus on demand from the UI and API. Copies live in the data directory. **Rebuildable data** (Drive snapshots, cached library lists) is left out of every copy, so backups stay small; it stays in the same database so that it can be updated in one transaction with the work it belongs to.
   - **Restoring** *(decided 2026-11-10)*: `autoplow restore <file>`, run on the host as the service user while the service is stopped. It checks that the file is a consistent Autoplow database, refuses one from a newer version, keeps a copy of the current database first, and upgrades an older backup on the next start. Nothing in the UI or API can replace the database.
   - **When the database can't be written** (disk full, read-only): incoming triggers are refused with 503 and `Retry-After`, never accepted and lost. The Health page shows the cause, and work resumes on its own when writing succeeds again.
+  - **Low disk space:** Autoplow keeps a small reserve in the data directory (64 MB by default) and gives it up when the disk fills, so it can go on recording what uploads do; uploads are what frees space. A backup that would not fit is skipped and reported as `backup.failed`. A transfer whose result cannot be recorded is checked against the remote at the next start before its file is touched again.
+  - **After a restore:** undelivered notifications older than the restore are discarded, not sent; sessions are cleared; Autoplow's record of having paused a download client is cleared; Drive monitors rebuild their snapshots. The secret key is checked against the restored file by the command itself.
+- **Time:**
+  - Waits, backoff, cooldowns and expiry of live state are measured on a clock that never jumps. Retention and scheduled times use the wall clock.
+  - A scheduled time that does not exist on a day (clocks go forward) runs at the next valid minute; one that occurs twice runs once.
+  - **Missed schedules:** a scheduled check, sweep or backup that was due while Autoplow was down runs once at start, if it is less than a day late.
+  - Retention removal never runs in the first 10 minutes after start, so a host that boots with a wrong clock does not prune early.
 - **Paths:**
   - `FolderPath`, compared by components.
   - Rewrite rule sets per trigger, per target and per pair, with overlaps rejected within a set.
@@ -44,7 +51,7 @@ Provide the foundation every module builds on. A component can be restarted when
   - **What the filesystem browser shows** *(decided 2026-11-10)*: any folder the service account can read, as folder and file names only. It never returns file contents, never follows a request outside the folder asked for (`..` is refused), and needs an admin session or a full-access key.
 - **Auth:**
   - A single admin user (argon2).
-  - **Sign-in can be switched off** *(decided 2026-11-10)*, for installs where a reverse proxy already authenticates every browser request. With it off, the UI is given a session without asking for a password. Nothing else changes: a script still needs an API key and a trigger its token. This is not a security boundary, and the setting says so: anyone who can reach the port can open the UI and so has admin access.
+  - **Sign-in is always on** *(decided 2026-11-10; replaces an earlier switch to turn it off)*. Autoplow asks for its own sign-in even behind a proxy that already authenticates, because containers and other machines can reach its port without going through the proxy. See [ADR-0019](../decisions/0019-admin-access-and-security-rules.md).
   - **Forgotten password:** `autoplow reset-password`, run on the host as the service user, sets a new one and signs out all sessions.
   - API keys, admin or read-only. A key can be regenerated; the old one stops working at once.
   - UI sessions with CSRF protection. A session lasts 30 days from its last use. Signing out ends it, and changing the password ends every other session.
@@ -82,6 +89,36 @@ Provide the foundation every module builds on. A component can be restarted when
   - Follows the [UI rules](ui.md): tokens, accent, density, the sidebar, and dialog behaviour live in the shell.
   - An API client from `api-types`.
 
+## Security rules
+*(Added 2026-11-10 after a security review; the reasoning is in [ADR-0019](../decisions/0019-admin-access-and-security-rules.md).)*
+
+**Admin access is equivalent to a shell as the service account.** The admin chooses which rclone runs and with what options, and can point a move at any folder. Every rule below exists to keep admin access with the admin.
+
+- **Who is asking:**
+  - The `Host` of every browser request must be Autoplow's browser address, the callback base, or a loopback name; anything else is refused. This stops a web page elsewhere from reaching a LAN-only install.
+  - Forwarded headers are believed only from a trusted proxy. The client address is the rightmost one not in the trusted list. A trusted range wider than a /24 is warned about.
+  - The login lockout never locks everyone out: it slows a client address, and beyond that slows all sign-ins, but a correct password always works after the wait.
+- **Sessions:**
+  - The cookie is `HttpOnly`, `SameSite=Strict`, and `Secure` whenever the request came over HTTPS.
+  - A change is accepted from a browser only with a JSON content type, a matching `Origin` and the session's CSRF token. There is no cross-origin access.
+  - Only a hash of a session is stored. Sessions are left out of backups, last 30 days from last use and at most 90 days in all, and end when the password changes.
+  - API keys are accepted in the `Authorization` header only, never in a query string.
+- **Read-only keys:** every request that is not a `GET` needs an admin key or the session. These `GET`s are admin-only too: any secret, every `/browse` route, the results of Plex and Google sign-ins, and mapping suggestions. A **metrics** key can read `/metrics` and nothing else.
+- **What counts as a secret:** tokens, passwords and API keys of every connection; webhook header values; Apprise and webhook URLs; shared trigger credentials; values of rclone environment variables; Plex user tokens (these are never shown). A URL with a user name or password in it is refused; the credentials go in their own fields.
+- **Triggers:**
+  - The token is checked before the body is read. Failed attempts are slowed per client address.
+  - A body is at most 1 MB and names at most 1000 paths.
+  - Back-pressure is counted per trigger as well as overall, so one noisy sender cannot shut out the others.
+  - A query-string token is accepted only where the sender cannot send a header (the legacy routes and Bazarr).
+- **Outbound calls:** redirects are not followed, so a token is never sent to a host the admin did not enter.
+- **Responses:** a content security policy that allows only Autoplow's own scripts and styles, no framing by other sites, no content sniffing, no referrer, and no caching of API responses. Fonts are served by Autoplow.
+- **The UI:** text from outside (file names, titles, server names, release notes) is always shown as text. The address to return to after sign-in must be a path within Autoplow. An address never performs an action when opened.
+- **Files:** the data directory, database, backups, logs and bootstrap report are readable by the service account only, and Autoplow refuses to start if the data directory is open to others.
+- **Commands:** `reset-password` and `restore` ask for what they need at a prompt, never as an argument, and refuse to run as a different account from the one that owns the data.
+- **Security events** are logged and listed on the Health page: sign-ins and lockouts, secrets shown, API keys created or changed, and changes to rclone settings.
+- **The setup token** is the one secret written to the log, once, and is useless after an admin exists.
+- **Encryption:** stored secrets use authenticated encryption, each bound to the row and field it belongs to. Changing the key does not protect a backup taken under the old key.
+
 ## Events raised
 These are the notification types this module raises (the catalogue is in [notifications.md](notifications.md)).
 - `component.failing`: a background component keeps restarting.
@@ -102,7 +139,7 @@ These are the notification types this module raises (the catalogue is in [notifi
 8. Steady-state RSS with an empty configuration is ≤ 64 MB, and idle CPU is ≤ 1 % of one core.
 9. The UI shell passes the Playwright login test and has zero serious or critical axe violations.
 10. Without `AUTOPLOW_SECRET_KEY`, or with a wrong one, Autoplow refuses to start and changes nothing. Starting with a new key and the old one in `AUTOPLOW_SECRET_KEY_OLD` re-encrypts every secret, and the old key then no longer works.
-11. With sign-in switched off, opening the UI gives a session without a password; an API request with neither a session nor a key still gets 401, and a trigger route without its token is still refused.
+11. Every request under `/api/v1` without a session or a key gets 401, and a trigger route without its token is refused; no setting changes that.
 12. `autoplow reset-password` sets a new password and ends all sessions. Changing the password in the UI ends every other session.
 13. A lockout caused by one client address does not affect another. Behind a trusted proxy the forwarded address is used; a forwarded header from an untrusted address is ignored.
 14. A copy of the database is taken before migrations and daily, without the rebuildable data; only the configured number is kept; a backup on demand produces a file that opens as a consistent database. A database from a newer version is refused at start.
@@ -115,6 +152,14 @@ These are the notification types this module raises (the catalogue is in [notifi
 21. With the update check on, a newer release is shown on About and Health within a day and no notification is raised; with it off, no request is made. The request carries nothing that identifies the install.
 22. `autoplow restore` refuses to run while the service is running, refuses a file that is not a consistent Autoplow database or comes from a newer version, and keeps a copy of the database it replaces. After a restore and start, the restored data is served.
 23. The filesystem browser lists names in a readable folder, returns no file contents, refuses a path containing `..`, and answers 403 to a read-only key.
+24. A request whose `Host` is not Autoplow's browser address, the callback base or a loopback name is refused. Forwarded headers from a peer that is not a trusted proxy are ignored, and the client address is the rightmost one not in the trusted list.
+25. The session cookie is `HttpOnly` and `SameSite=Strict`. A change from a browser without the CSRF token, with another `Origin`, or without a JSON content type is refused. The stored session cannot be used as a cookie, no backup contains a session, and a session ends 90 days after it began.
+26. A read-only key gets 403 for every request that is not a `GET` and for each admin-only `GET`; a metrics key gets 403 everywhere but `/metrics`; an API key in a query string is refused.
+27. Every response carries the content security policy, no-framing, no-sniffing and no-referrer headers, and the UI loads nothing from another origin.
+28. Autoplow refuses to start when its data directory is readable by other accounts, and every file it creates there is private.
+29. The outbound client does not follow a redirect.
+30. Sign-ins, lockouts, secrets shown, API key changes and rclone setting changes each appear in the security events list.
+31. On a full disk the reserve is given up and upload results are still recorded. A schedule missed while stopped runs once at start; a scheduled time that does not exist that day runs at the next valid minute. After a restore, older undelivered notifications are discarded and no session survives.
 
 ## Boundaries
 - **Always:** follow `CONSTRAINTS.md`; keep wall-clock time behind the `Clock` trait.

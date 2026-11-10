@@ -41,6 +41,13 @@ Run and supervise `rclone rcd` as a private child process, and give `upload`, `t
   - `backend/command` with the crypt `decode` command, in batches (for `gdrive` crypt remotes)
 - **Polling:** completion and progress, by job ID and group.
 - **Cleanup:** finished stats groups are swept.
+- **Limits on a fresh child:** whenever the child starts (first start, crash, Reload, config change), the current bandwidth limit is applied before any transfer is started. At daemon start, uploads wait for the first reading of stream counts, for at most 30 seconds.
+- **Which config changes count:** rclone rewrites the file itself when it renews a token. A change that only touches token fields is ignored. For any other change, if no idle moment comes within 1 hour, new transfers are held until the running ones finish, and the child restarts then.
+- **Options that are refused** *(security review, 2026-11-10)*: anything that opens a listener, moves the config or the log, prints credentials, or sets the bandwidth limit. That is the `--rc`, `--metrics`, `--config`, `--log-file`, `--dump`, `--bwlimit` and `--password-command` families, and the same settings given as `RCLONE_` variables. Names are compared after normalising, so a different spelling does not slip through.
+- **Environment:** the child gets only the variables the admin listed, plus a short fixed set (`HOME`, `PATH`, `TZ`, proxy settings). It never gets Autoplow's secret key, and it does not inherit any capability the service holds.
+- **Secret values** are passed as environment variables only. An option on the command line cannot be marked secret.
+- **The rclone path** must be absolute, a regular file, and not writable by anyone but its owner and root.
+- **Remotes** in a destination must be names from `rclone.conf` or an absolute local path; a connection string made up on the spot is refused. A destination may not contain Autoplow's data directory or `rclone.conf`.
 
 ## Events raised
 These are the notification types this module raises (the catalogue is in [notifications.md](notifications.md)).
@@ -61,6 +68,9 @@ These are the notification types this module raises (the catalogue is in [notifi
 12. On shutdown, running transfers are stopped, their sources are intact, and they are queued again after restart.
 13. A remote added to `rclone.conf` is available after the child restarts when idle, without restarting Autoplow; Reload makes it available at once.
 14. An extra option Autoplow must control is refused with the reason; any other is passed to the child; a bandwidth limit in the environment does not override the throttle's.
+15. An extra option or environment variable from a refused family is rejected when saved, whatever its spelling, and the child's environment holds neither Autoplow's secret key nor any variable the admin did not list beyond the fixed set.
+16. After every child start, the current bandwidth limit is in place before the first transfer begins.
+17. A config change that only renews a token causes no restart; another change restarts the child within an hour even with transfers always running.
 
 ## Boundaries
 - **Always:** follow `CONSTRAINTS.md`.

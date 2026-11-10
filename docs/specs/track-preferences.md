@@ -16,7 +16,7 @@ This was formerly Plex-Auto-Languages (PAL), the standalone app.
 Plex only. Tofa has native per-profile language preferences, so PAL doesn't apply to it.
 
 ## Model
-- **Preferences:** stored per (user, show). Each holds the audio stream signature and the subtitle stream signature, or "off", in the shape PAL uses for matching:
+- **Preferences:** stored per (user, show), or per (user, show, season) when the scope level is season *(decided 2026-11-10)*, so a different choice in one season does not replace another's. Each holds the audio stream signature and the subtitle stream signature, or "off", in the shape PAL uses for matching:
   - language
   - codec
   - channel layout
@@ -36,6 +36,7 @@ Plex only. Tofa has native per-profile language preferences, so PAL doesn't appl
 - **Shows** *(decided 2026-11-10)* can be left out two ways:
   - excluded on the Track preferences page
   - by a Plex label (default `PAL_IGNORE`, configurable), so an existing PAL setup carries over. Labels are read with the show and cached; a label change takes effect by the next sweep.
+- **Files** *(decided 2026-11-10)*: episodes whose file path matches an ignore pattern are skipped.
 - An excluded show keeps its stored preferences; nothing is recorded or applied for it while excluded.
 
 ## Users
@@ -44,13 +45,14 @@ Plex only. Tofa has native per-profile language preferences, so PAL doesn't appl
 - **Tokens:**
   - Taken from the plex.tv `shared_servers` data.
   - Cached, and refreshed when a request fails.
-  - **Never logged.**
+  - **Never logged,** never shown in the UI or API, sent only as a request header, and kept only in memory or encrypted.
   - How a token is obtained for a home user protected by a PIN is verified before build and recorded as a platform note. A user whose token cannot be obtained is shown as such and skipped.
 
 ## Triggers (each can be switched on or off)
 1. **Play or track change**
    - Source: the websocket `playing` events. The session is resolved to its user.
    - If the streams changed, the preference is updated and the change is propagated.
+   - **Without playing** *(decided 2026-11-10)*: a track changed on an episode's page is picked up from Plex's activity events and treated the same way. Plex sends these from its web and desktop apps only. This has its own switch, off by default.
 2. **New or upgraded episodes**
    - Detected through timeline and activity events, plus a part-key diff, as in PAL.
    - Each stored preference for that show is applied, separately for every user.
@@ -82,6 +84,9 @@ Plex only. Tofa has native per-profile language preferences, so PAL doesn't appl
 - Writes go through the target's pacing in their own lane, behind scans, so a long show cannot hold up scan delivery.
 - An episode that already has the right tracks selected is not written.
 
+## Events raised
+- `tracks.applied`: preferences were applied for a user; grouped, naming the user, the show and how many episodes changed. It names no other user. *(Added to the catalogue 2026-11-10.)*
+
 ## Acceptance criteria
 1. When a user changes tracks during playback, a preference is stored for (user, show) and applied to the configured scope (show/season × all/next).
 2. New or upgraded episodes get every stored preference applied, per user, using that user's token; tokens never appear in logs.
@@ -97,6 +102,10 @@ Plex only. Tofa has native per-profile language preferences, so PAL doesn't appl
 12. A re-added show keeps its preferences; a user without access for 30 days loses theirs.
 13. Applying a preference to a long show does not delay a scan queued for the same target.
 14. Every change made is listed in the history with user, show, from and to, and is removed after its retention time.
+15. With season scope, a different choice in season 2 leaves season 1's preference as it was.
+16. With the switch on, a track changed on an episode's page without playing is recorded and applied like one changed during playback.
+17. An episode whose file matches an ignore pattern is never written.
+18. Applying preferences raises `tracks.applied` naming only that user.
 
 ## Boundaries
 - **Always:** follow `CONSTRAINTS.md`; validate external input at the boundary.

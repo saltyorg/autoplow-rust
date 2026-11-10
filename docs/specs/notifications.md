@@ -8,6 +8,7 @@ Tell the admin about failures, health changes, parity findings and activity on t
 ## Non-goals
 - Per-viewer notifications
 - Chat-ops commands
+- Sending through Apprise URLs directly: Apprise is a Python library, so Autoplow posts to an Apprise API server, which the admin runs. Pushover, Slack and others are reached that way.
 - User-written message templates, quiet hours and severity routing (v1 messages have one fixed format)
 
 ## Channels
@@ -16,7 +17,7 @@ Tell the admin about failures, health changes, parity findings and activity on t
 - **Generic webhook:** a JSON POST of `{events:[{type, category, timestamp, summary, details}]}` with optional headers.
 
 ## Event catalogue
-Each event belongs to a category. Users subscribe at the level of individual event types. These 29 types are the v1 catalogue *(final 2026-11-10)*.
+Each event belongs to a category. Users subscribe at the level of individual event types. These 30 types are the v1 catalogue *(final 2026-11-10; `tracks.applied` added the same day by decision)*.
 
 | Category | Event types |
 |---|---|
@@ -24,6 +25,7 @@ Each event belongs to a category. Users subscribe at the level of individual eve
 | Library parity | `parity.mismatch.found`, `parity.fix.applied`, `parity.fix.failed`, `parity.merged.manual`, `parity.run.completed` |
 | Uploads | `upload.completed` (aggregated), `upload.failed`, `downloader.paused`, `downloader.resumed`, `throttle.changed` |
 | Scans | `scan.delivered` (aggregated), `scan.failed` |
+| Track preferences | `tracks.applied` (aggregated) |
 
 Notes on the health events *(added 2026-10-30)*:
 - `gdrive.account.revoked`: Google revoked or expired an account's grant. Every monitor using that account stops; it is reported once, for the account, not again per monitor.
@@ -38,6 +40,7 @@ Notes on the health events *(added 2026-10-30)*:
 - **Aggregated events** (`upload.completed`, `scan.delivered`, and any type when several are grouped) say how many, over what time span, and name up to five examples.
 - **Generic webhook payload:** `{events:[{type, category, timestamp, summary, details}]}`. `details` is typed per event type and documented with the API.
 - No message ever contains a secret.
+- Text from outside (file names, titles, error messages from other services) is escaped for the channel, cannot mention anyone, and never includes an address that carries credentials.
 
 ## Routing
 - Each channel has a list of subscribed event types, so different event types can go to different channels.
@@ -79,6 +82,7 @@ Notes on the health events *(added 2026-10-30)*:
 10. For one source, a recovery message is never delivered before its problem message, including when the problem message needed retries.
 11. A test message reaches the channel regardless of its subscriptions and filter.
 12. A message includes a link to the relevant page when the browser address is set, and never includes a secret.
+13. A file name containing channel markup or a mention is delivered as plain text and mentions no one.
 
 ## Boundaries
 - **Always:** follow `CONSTRAINTS.md`; validate external input at the boundary.
@@ -86,4 +90,4 @@ Notes on the health events *(added 2026-10-30)*:
 - **Never:** Include secrets in notification bodies.
 
 ## Open questions
-- ~~Final event catalogue~~ (**decided 2026-11-10:** the 29 types above).
+- ~~Final event catalogue~~ (**decided 2026-11-10:** the 30 types above).

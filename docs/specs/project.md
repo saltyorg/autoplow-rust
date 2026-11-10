@@ -29,6 +29,8 @@ Autoplow is a single daemon that keeps a Saltbox media stack consistent and movi
 - a container image
 - telemetry: Autoplow never reports usage anywhere. Its only call of its own is the update check, which can be switched off ([core.md](core.md))
 - updating itself
+- cloudplow's syncer (copying between remotes through a rented server)
+- a dry-run mode for uploads
 - Lidarr in library parity; Lidarr is supported as a scan trigger only
 - a migration tool for importing cloudplow/autoscan config files (the webhook migration helper is a feature, not a v1 success criterion)
 

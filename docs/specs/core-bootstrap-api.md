@@ -14,7 +14,8 @@ Configure Autoplow once from Ansible and manage it afterwards through a complete
 *(decided 2026-11-10)*
 - **With a bootstrap file** (Saltbox): the file creates the admin, as below.
 - **Without one:** as long as no admin exists, the UI shows a one-time setup page to choose the username and password.
-  - A request from the host itself can use it directly. From anywhere else it also asks for a setup token, which Autoplow prints once in its log at start.
+  - It always asks for a setup token, which Autoplow prints once in its log at start *(decided 2026-11-10; there is no shortcut for requests from the host itself, because behind a proxy every request looks local)*.
+  - The page does not exist while a bootstrap file is present, whether or not it was applied.
   - The page stops existing as soon as an admin exists.
 
 ## Bootstrap file
@@ -93,14 +94,16 @@ The detailed schema will be generated from the same Rust types the API uses, as 
 - **Concurrent edits:** each resource carries a version (`ETag`). A change sent with an older version (`If-Match`) is refused with 412, and the UI says the item changed elsewhere and offers to reload it. A change sent without a version is applied.
 - **Deleting something in use** is refused with 409 and the list of what uses it (for example the triggers, anchors and destinations that name a target). Nothing is removed as a side effect. Work still queued for the item is dropped only when the delete is confirmed.
 - **`settings`** is a single resource with one group per area. Every key is typed and validated, and every value a Settings page or an options card shows is a key here:
-  - **general:** callback base URL, Autoplow's own browser address (for links in notifications), sign-in switch, trusted proxies, time zone, the update check switch, shared trigger credentials, the Arr reconcile interval, retention periods, backup schedule, log levels and log-file retention.
+  - **general:** callback base URL, Autoplow's own browser address (for links in notifications), trusted proxies, time zone, the update check switch, shared trigger credentials, the Arr reconcile interval, retention periods, backup schedule, log levels and log-file retention.
   - **scan:** minimum age and maximum wait defaults, dead-letter attempts.
   - **notifications:** the problem delay, delivery attempts, the grouping window.
   - **rclone:** config path, which rclone, extra options and environment variables.
-  - **uploads:** the global transfer cap, upload windows, fixing file dates, retry attempts, cooldown times.
-  - **throttle:** what counts as a stream, the settling time, "no new uploads above N streams".
+  - **uploads:** the global transfer cap, upload windows, fixing file dates, retry attempts, cooldown times, the stalled-transfer time.
+  - **throttle:** what counts as a stream, the settling time, "no new uploads above N streams", and per client "pause above N streams".
   - **parity:** when to check, automatic fixes per server and finding type, the safety limit, match language, excluded pairs and finding types, retention.
-  - **track-preferences:** per Plex target whether it is on and for which libraries, the ignore label, the three trigger switches, the sweep time, the default scope.
+  - **track-preferences:** per Plex target whether it is on and for which libraries, the ignore label, ignored file patterns, the trigger switches, the sweep time, the default scope.
+- **Deleting something that cannot be reached or still has work:** the 409 lists what would be lost; repeating the delete with `?confirm=true` goes ahead. For an Arr that is down, the delete goes ahead and says its managed connection may still exist in the Arr. Parity findings and settings for a deleted Arr or target are removed with it.
+- **A long job cut off by a restart** is reported as interrupted, unless the job is one that resumes by itself (a Drive snapshot), which continues.
 
 ## Routes
 | Route | For | Authentication |
@@ -112,15 +115,15 @@ The detailed schema will be generated from the same Rust types the API uses, as 
 | `/triggers/{sonarr,radarr,lidarr,manual}`, `/triggers/a-train/{drive}`, `/triggers/bazarr`, `/stats`, `/api/config-template` | callers written for autoscan, A-Train and Bazarr | the matching trigger's credentials |
 | `/health` | service checks | none; reveals only ok or not ok |
 | `/metrics` | Prometheus | a read-only API key |
-| `/setup` | first-start setup page | the setup token, unless opened on the host; gone once an admin exists |
+| `/setup` | first-start setup page | the setup token; absent once an admin exists or while a bootstrap file is present |
 | everything else | the UI's own files | none |
 
-No route under `/triggers` ever depends on a browser sign-in. A request under `/api/v1` carries a session or an API key; with sign-in switched off, the UI's session is given without a password (see the core spec).
+No route under `/triggers` ever depends on a browser sign-in. A request under `/api/v1` carries a session or an API key.
 
 ## REST API
 - **Base:** `/api/v1`, designed OpenAPI-first. The OpenAPI document is served at `/api/v1/openapi.json`.
 - **Auth:**
-  - `Authorization: Bearer <api key>` (scoped: admin, read-only).
+  - `Authorization: Bearer <api key>` (scoped: admin, read-only, metrics).
   - The UI uses session cookies plus CSRF protection.
 - **Resources:**
   - `targets`, `arrs`, `triggers`, `destinations`, `downloaders`, `limiters`, `remotes` (read-only, from `rclone.conf`), `notifications`, `anchors`, `rewrite-sets`, `gdrive/clients`, `gdrive/accounts`, `gdrive/monitors`, `api-keys`, `settings`
@@ -141,7 +144,7 @@ No route under `/triggers` ever depends on a browser sign-in. A request under `/
   - `GET /queues/{target}`; `GET /queues/{target}/delivered` (history); `GET /scans/unmatched`
   - `POST /queues/{target}/{id}/send` (send now); `POST /queues/{target}/{id}/retry`
   - `GET /uploads` (filter by state: waiting, running, failed, finished)
-  - `POST /uploads/{id}/retry|stop`; `DELETE /uploads/{id}` (discard a failed file)
+  - `POST /uploads/now` (all, or `?destination=`); `POST /uploads/{id}/retry|stop`; `DELETE /uploads/{id}` (discard a failed file)
   - `DELETE /queues/{target}/dead-letters[/{id}]` (discard one or all)
   - `POST /uploads/hold` and `DELETE /uploads/hold`; `POST /uploads/stop` (stop all)
   - `POST /parity/runs`
@@ -155,7 +158,7 @@ No route under `/triggers` ever depends on a browser sign-in. A request under `/
   - `POST /backups` (take one now); `GET /backups`
   - `POST /session` (sign in); `DELETE /session` (sign out); `PUT /session/password`; `POST /setup` (first start only)
   - `POST /api-keys/{name}/regenerate`
-  - `GET /status` (version and the latest release, bootstrap result, every component, every connection, recent health events: what the Health and About pages show)
+  - `GET /status` (version and the latest release, bootstrap result, every component, every connection, recent health and security events: what the Health and About pages show)
   - `GET /stats` (the Dashboard tiles and the per-trigger and per-target counts)
   - `PUT /log-levels/{component}`
   - `POST /gdrive/monitors/{name}/poll|pause|resume|rebuild`; `GET /gdrive/monitors/{name}/changes|snapshot`
@@ -178,7 +181,7 @@ No route under `/triggers` ever depends on a browser sign-in. A request under `/
 2. `PUT /api/v1/<kind>/{name}` twice with the same body yields `unchanged` the second time; `POST /apply?dry_run=true` performs no writes.
 3. No list or resource response contains a secret (`{"set": true}` only). The admin-only secret endpoint returns one secret, and a read-only key gets 403 from it.
 4. Every UI page is built solely on public API endpoints.
-5. With no admin and no bootstrap file, the setup page creates the admin: from the host itself directly, from elsewhere only with the setup token. Once an admin exists the page is gone and its route answers 404.
+5. With no admin and no bootstrap file, the setup page creates the admin, and only with the setup token. Once an admin exists, or while a bootstrap file is present, the page is gone and its route answers 404.
 6. A bootstrap file readable by other accounts, or with an unknown `version`, is refused and nothing is applied.
 7. Renaming a target keeps its queue entries, history and references, and an Arr webhook created before the rename still delivers.
 8. A change sent with a stale version gets 412 and changes nothing; the same change sent with the current version succeeds.
@@ -187,6 +190,7 @@ No route under `/triggers` ever depends on a browser sign-in. A request under `/
 11. A list of 10 000 rows is returned in pages that never skip or repeat a row while rows are being added.
 12. A long job returns 202 at once, reports progress, survives the client disconnecting, and a second start of the same job gets 409.
 13. Every route in the routes table accepts exactly the authentication listed for it and rejects the others (matrix test).
+14. A delete that would lose queued work, or whose Arr is unreachable, answers 409 with what would be lost, and goes ahead when repeated with `confirm=true`.
 
 ## Boundaries
 - **Always:** follow `CONSTRAINTS.md`; validate external input at the boundary.

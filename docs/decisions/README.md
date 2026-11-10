@@ -10,7 +10,7 @@ Format: Status, Date, Context, Decision, Alternatives Considered, Consequences. 
 | [0004](0004-rust-as-implementation-language.md) | Rust as implementation language | Accepted |
 | [0005](0005-aggressive-quality-policy.md) | Aggressive compiler, lint and CI policy | Accepted |
 | [0006](0006-leptos-for-the-web-ui.md) | Leptos (client-side WASM) for the web UI | Accepted |
-| [0007](0007-seed-once-bootstrap-and-rest-api.md) | Seed-once bootstrap, idempotent REST API, API-only UI | Accepted |
+| [0007](0007-seed-once-bootstrap-and-rest-api.md) | Seed-once bootstrap, idempotent REST API, API-only UI | Accepted (amended by 0019) |
 | [0008](0008-sqlite-and-per-target-durable-queues.md) | SQLite with per-target durable queues | Accepted |
 | [0009](0009-folder-level-scans-only.md) | Folder-level partial scans only | Accepted |
 | [0010](0010-component-path-matching-and-scoped-rewrites.md) | Component path matching and scoped rewrites | Accepted |
@@ -22,3 +22,5 @@ Format: Status, Date, Context, Decision, Alternatives Considered, Consequences. 
 | [0016](0016-console-ui-direction.md) | Console visual direction and UI rules | Accepted |
 | [0017](0017-download-clients-module-and-stream-aware-limits.md) | Download clients as their own module, limited by stream activity | Accepted |
 | [0018](0018-host-service-deployment.md) | Autoplow runs as a service on the host | Accepted |
+| [0019](0019-admin-access-and-security-rules.md) | Admin access is a shell, and the rules that follow | Accepted |
+| [0020](0020-what-a-target-can-see.md) | What a target can see decides when it is scanned | Accepted |

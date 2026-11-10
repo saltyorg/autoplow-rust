@@ -24,7 +24,7 @@ Talk to the user's download clients and be the **single owner** of what Autoplow
 
 ## One owner, one desired state
 - **Requests:** `upload` and `throttle` never call a client. They hand this module a request:
-  - **Pause**, with a reason. `upload` uses "uploads are running" and "free space is low".
+  - **Pause**, with a reason. `upload` uses "uploads are running" and "free space is low"; `throttle` uses "too many streams".
   - **Limits**: a download limit and an upload limit, or unlimited. `throttle` sets these.
 - **Desired state** per client is the combination of all current requests:
   - Paused while at least one pause reason is active.
@@ -35,6 +35,7 @@ Talk to the user's download clients and be the **single owner** of what Autoplow
 - **Only Autoplow's own pauses are undone.** Autoplow remembers whether it paused a client. A client the admin paused in the client's own UI stays paused and is shown as "paused outside Autoplow"; a client that Autoplow paused and someone resumed is paused again while a pause reason is active.
 - **Free-space pause:** measured on a folder set per client (its download folder). It starts below the threshold and ends only once free space is back above the threshold plus a margin (10 % of the threshold by default), so it does not flip on and off.
 - **"Uploads are running" pause** ends after the upload queue has been idle for a grace period (default 5 minutes).
+- **Order:** Autoplow records that it is about to pause a client before it makes the call. If that cannot be recorded, the pause is not made.
 
 ## Autoplow owns the speed limit
 *(decided 2026-11-10)*
@@ -72,6 +73,7 @@ These are the notification types this module raises (the catalogue is in [notifi
 9. A client paused in its own UI is not resumed by Autoplow; a client Autoplow paused is resumed when its last pause reason ends.
 10. The free-space pause starts below the threshold and ends only above the threshold plus its margin.
 11. A client switched off receives no further calls after its idle limit is restored and Autoplow's own pause is ended.
+12. If Autoplow cannot record that it is about to pause a client, it does not pause it.
 
 ## Boundaries
 - **Always:** follow `CONSTRAINTS.md`; validate external input at the boundary.

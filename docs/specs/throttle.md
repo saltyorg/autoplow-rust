@@ -27,6 +27,8 @@ Keep other traffic from degrading playback: adapt rclone's upload bandwidth and 
 - **What counts** *(decided 2026-11-10)*: films, episodes and live TV. Music, photos and trailers do not count by default; each kind can be switched on. In by-bitrate mode a counted stream contributes its own bitrate.
 - Excluding LAN streams is optional. Whether a stream is local comes from the media server's own report for that session. The UI explains that it only helps when the NIC/LAN is faster than the WAN upstream.
 - **A server that can't be read** *(decided 2026-11-10)* counts as zero streams at once: a server that is down is not streaming. The Throttle page says its count is assumed.
+- **"Can't be read"** means the live connection is down **and** a poll has failed. While a websocket reconnects and polling still answers, the count is the polled one and nothing changes.
+- A disabled target is not read and counts as zero.
 
 ## Units
 - **Limits** are bytes per second, written the way rclone writes them: `80M` is 80 MiB/s. The UI shows them as MB/s.
@@ -63,6 +65,9 @@ Keep other traffic from degrading playback: adapt rclone's upload bandwidth and 
 
 - **The limit with no streams** is part of the mode: the 0 row of a tiers table, or `max` in per-stream mode. For a download client this is its idle limit (see [the downloaders spec](downloaders.md)).
 
+## Pausing a client on streams
+*(Decided 2026-11-10.)* Besides limiting, a download client that can be paused (SABnzbd and NZBGet) can be **paused above a number of streams**, set per client and off by default. It uses the same counting and settling rules as limits: paused within 5 s of reaching the number, resumed only after the count has stayed below it for the settling time. The pause is one more reason in the [downloaders spec](downloaders.md), beside the two from `upload`.
+
 ## Bitrate sanity
 - Each stream's bitrate is clamped to a configurable maximum, for example 200 Mbps.
 - It is also clamped to the media file's own bitrate when the session reports it.
@@ -95,6 +100,8 @@ These are the notification types this module raises (the catalogue is in [notifi
 13. A limit is lowered within 5 s of a stream starting, and raised only after the count has stayed lower for the settling time; a pause followed by a resume within that time causes no change.
 14. A manual override replaces every limiter's result for its duration, ends by itself, and is still in force after a restart within that time.
 15. By-bitrate results match hand-calculated values for a table mixing Mbit/s bitrates and MiB/s limits; a limit below 100 kB/s is refused.
+16. A client set to pause above N streams is paused within 5 s of reaching N and resumed only after the count has stayed below N for the settling time.
+17. A websocket that drops while polling still answers changes no limit; a server whose connection and poll both fail counts as zero at once.
 
 ## Boundaries
 - **Always:** follow `CONSTRAINTS.md`; validate external input at the boundary.
