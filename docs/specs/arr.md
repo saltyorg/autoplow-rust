@@ -8,6 +8,7 @@ Talk to every Arr instance correctly: receive and parse their webhooks, and keep
 ## Non-goals
 - Managing Arr settings beyond our own connection
 - Readarr (archived)
+- Catching up on events an Arr sent while Autoplow was not running *(decided 2026-11-10)*. Arrs do not retry a webhook, so those events are missed; the scheduled library parity check finds what a server lacks afterwards.
 
 ## Adding an Arr instance
 1. **Entry:** the user enters a URL and API key. The instance is added in the UI, through the API, or seeded from the bootstrap file.
@@ -23,8 +24,14 @@ Talk to every Arr instance correctly: receive and parse their webhooks, and keep
    | Whisparr v3 | Radarr flavour |
 
    We also read `urlBase`.
-3. **Path mappings:** taken from `rootfolder`, then set up with the filesystem picker or evidence-based suggestions (see the scan spec).
+3. **Path mappings:** taken from `rootfolder`, then set up with the filesystem picker or a suggestion.
+   - **Suggestions** *(decided 2026-11-10)*: Autoplow takes a sample of files the Arr recently imported under a root folder and looks for the same relative paths under the folders it can see. When they line up under one folder, it suggests that folder and says how many of the sampled files matched.
+   - A suggestion is never applied on its own; the admin confirms it. With no match, or matches under more than one folder, nothing is suggested and the picker is used.
 4. **Trigger:** each Arr instance carries its own trigger settings with **per-instance credentials** (a header token). An Arr is one resource; there is no separate trigger entry for it (see the API spec, "Resource model").
+
+## Reaching the Arr
+- The Arr's API is called through the core outbound client, with the same per-connection options as a target: timeouts and a switch for the certificate check.
+- **Unreachable or refused** (no connection, or the API key no longer works): the Arr is shown as unavailable on its row and on the Health page. It raises `arr.unavailable` once that has lasted 2 minutes, and `arr.recovered` afterwards. Reconciling resumes on its own.
 
 ## The managed connection
 | Field | Value |
@@ -37,12 +44,14 @@ Talk to every Arr instance correctly: receive and parse their webhooks, and keep
 | Events (fixed) | **Sonarr / Whisparr v2:** onDownload, onUpgrade, onImportComplete, onRename, onSeriesDelete, onEpisodeFileDelete, onEpisodeFileDeleteForUpgrade. **Radarr / Whisparr v3:** onDownload, onUpgrade, onRename, onMovieDelete, onMovieFileDelete, onMovieFileDeleteForUpgrade. **Lidarr:** onReleaseImport, onUpgrade, onRename, onTrackRetag, onArtistDelete, onAlbumDelete. |
 
 Notes on the fixed event set:
+- The set is fixed per app **and version**: a flag an older version does not have is left out, and the platform note for that app lists which versions have which flags.
 - The `*ForUpgrade` deletes are included so that removing an old file triggers a scan.
 - Add and grab events are excluded.
 
 ## Lifecycle
 1. **Create:**
    - Our receiver must be up first, because v3/v1 run a live `Test` on save.
+   - If that test fails because the Arr cannot reach Autoplow's callback address, nothing is created. The dialog shows the address the Arr tried and the Arr's own error, and points to the callback base URL setting and the per-Arr override.
    - `POST /notification`. Store the returned `id`.
    - On Sonarr v5 we may use `skipTesting` and run our own test afterwards.
 2. **Reconcile:** runs periodically (default every 15 minutes) and on demand.
@@ -79,6 +88,10 @@ Notes on the fixed event set:
 3. Drift (any changed field) is detected and repaired with one full PUT; no PUT is sent when there is no drift (Lidarr re-tests on every PUT).
 4. Connections not owned by Autoplow are never modified; old autoscan-style hooks are only listed and offered for removal after ours is verified.
 5. Every payload shape in the research doc (incl. Sonarr per-file vs ImportComplete `Download`, Lidarr `albums` Test) parses; unknown events return 2xx and are logged.
+6. An Arr that stops answering, or refuses the API key, is shown as unavailable, raises `arr.unavailable` after 2 minutes and `arr.recovered` when it answers again; reconciling resumes without a restart.
+7. A mapping is suggested only when sampled imports line up under exactly one folder, with the match count shown; it is never applied without confirmation.
+8. Creating the managed connection against an Arr that cannot reach the callback address creates nothing and reports the address tried and the Arr's error.
+9. Against an Arr version that lacks one of the event flags, the connection is created without it and reads back as in sync.
 
 ## Boundaries
 - **Always:** follow `CONSTRAINTS.md`; validate external input at the boundary.

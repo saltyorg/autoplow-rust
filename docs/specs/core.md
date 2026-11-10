@@ -57,6 +57,13 @@ Provide the foundation every module builds on. A component can be restarted when
   - **Secrets are visible to the admin** *(decided 2026-10-30)*. Anyone who can see them already has admin access. Read-only API keys can't read any secret.
     - Every stored secret (API keys, trigger tokens, Arr API keys, target tokens, notification URLs, the OAuth client secret) is masked in its dialog, with a show/hide toggle inside the field so the admin can check it is the right one (see the [UI rules](ui.md)).
     - Lists don't show secrets; the API keys list has a **Copy** button per key.
+- **Outbound HTTP client** *(moved here from the targets spec 2026-11-10; every module that calls another service uses it)*:
+  - Timeouts: 10 s to connect, 30 s for an answer, adjustable per connection.
+  - A response size cap (4 MB by default); anything that can be larger is read in pages.
+  - `Retry-After` honoured.
+  - Certificate checking on by default, with a per-connection switch.
+  - Errors classified as retry later, back off the whole connection, or fail this one item.
+  - Tokens never appear in logs, including in request URLs.
 - **Observability:**
   - `tracing` logs with a level per component, with secrets redacted by type.
   - **Where logs go** *(decided 2026-11-10)*: standard output, for the journal, and a log file. Autoplow rotates the file daily or at 50 MB and keeps the last 7 (configurable). Levels can be changed per component while running. There is no log viewer in the UI in v1.
@@ -92,6 +99,7 @@ Provide the foundation every module builds on. A component can be restarted when
 17. `/health` answers without credentials and reveals no detail; `/metrics` without a key gets 401.
 18. The log file rotates by age and size and keeps only the configured number; a component's log level changed through the API applies without a restart.
 19. A feature whose required capability is missing reports itself as off, with the reason, on the Health page, and the rest of Autoplow runs normally.
+20. The outbound client enforces its timeouts and size cap, honours `Retry-After`, refuses a self-signed certificate unless that connection's check is switched off, and never logs a token.
 
 ## Boundaries
 - **Always:** follow `CONSTRAINTS.md`; keep wall-clock time behind the `Clock` trait.

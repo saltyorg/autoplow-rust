@@ -32,8 +32,7 @@ Behaviour each client must respect is recorded in `docs/platform-notes/`.
 
 ## Talking to a server
 - **Pacing:** one scan request at a time per target, with a gap between them (default 1 s). Both are adjustable per target. A batched call counts as one request.
-- **Timeouts:** 10 s to connect, 30 s for an answer, adjustable per target.
-- **Size:** a response is capped at 4 MB. Anything that can be larger (library and item listings) is always fetched in pages.
+- **Timeouts and size:** as the core outbound client sets them (10 s to connect, 30 s for an answer, 4 MB per response), adjustable per target. Library and item listings are always fetched in pages.
 
 ## Health
 | State | Meaning |
@@ -57,7 +56,7 @@ Behaviour each client must respect is recorded in `docs/platform-notes/`.
 
 ## Acceptance criteria
 1. Each client passes contract tests against recorded fixtures, covering every request it makes and every response shape it parses, including error and `Retry-After` cases.
-2. **Shared HTTP client:**
+2. **Through the core outbound client** (core AC20), every target call has:
    - Bounded timeouts.
    - A response size cap (4 MB default).
    - `Retry-After` honoured.

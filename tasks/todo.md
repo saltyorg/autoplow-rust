@@ -132,6 +132,14 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Files:** `crates/ui/src/*.rs`, `crates/autoplow/src/embed.rs`, `e2e/login.spec.ts`, `e2e/ui-rules.spec.ts`.
 - **Size:** M.
 
+### Task 0.11: Outbound HTTP client
+- [ ] **AC (core AC20):**
+  - Timeouts, size cap, `Retry-After`, certificate check with a per-connection switch, error classes, token redaction.
+- **V:** fake-server tests for each rule.
+- **Dep:** 0.6.
+- **Files:** `crates/core/src/http_client.rs`.
+- **Size:** S.
+
 ### Task 0.10: Health page and core Settings sections
 - [ ] **AC (ui AC10: Health, Settings › General, API keys, Appearance, About):**
   - Health: needs attention, components, connections, recent health events. Connections and events fill in as modules land.
@@ -184,8 +192,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 
 ### Task 2.1: Shared HTTP client and library resolver
 - [ ] **AC (targets AC2–AC4, AC8–AC12, AC14; scan AC8, the containment part):**
-  - Timeouts (10 s, 30 s), 4 MB response cap with paged listings, `Retry-After`, error taxonomy.
-  - Certificate check, with a per-target switch.
+  - Uses the core outbound client; paged listings.
   - Pacing: one request at a time per target with a gap.
   - Health states, backoff to 15 minutes, status call while unhealthy, unavailable after 2 minutes.
   - Disabled targets, keeping or dropping their scans.
@@ -194,8 +201,8 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
   - Library cache refreshed periodically and on a miss.
   - Component-based containment, multi-library resolution.
 - **V:** unit tests and recorded fixtures.
-- **Dep:** 0.2, 0.6.
-- **Files:** `crates/targets/src/{http,libraries}.rs`.
+- **Dep:** 0.2, 0.11.
+- **Files:** `crates/targets/src/{pacing,health,libraries}.rs`.
 - **Size:** M.
 
 ### Task 2.2: Plex client
@@ -238,7 +245,8 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 ## Phase 3: `arr`
 
 ### Task 3.1: Arr client and detection
-- [ ] **AC (arr AC1, core-bootstrap-api AC10):**
+- [ ] **AC (arr AC1, AC6, core-bootstrap-api AC10):**
+  - Unavailable and recovered states and events.
   - An Arr is one resource carrying its trigger settings; no separate trigger entry.
   - `system/status` detection of Sonarr v4/v5, Radarr, Lidarr, Whisparr v2/v3 and urlBase.
   - Root folders.
@@ -260,8 +268,9 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** M.
 
 ### Task 3.3: Managed connection reconciler
-- [ ] **AC (arr AC2–AC4):**
-  - Desired definition built from the Arr's own schema, with header token, fingerprint header and `tags: []`.
+- [ ] **AC (arr AC2–AC4, AC8, AC9):**
+  - Desired definition built from the Arr's own schema and version, with header token, fingerprint header and `tags: []`.
+  - A failed callback test creates nothing and reports the address tried and the Arr's error.
   - Create only when the receiver is ready.
   - Detect drift and repair with a full PUT only when drift exists.
   - Never touch connections we don't own.
@@ -271,9 +280,9 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** M.
 
 ### Task 3.4: Migration helper and evidence-based mapping suggestions
-- [ ] **AC (arr AC4; scan path-mapping requirements):**
+- [ ] **AC (arr AC4, AC7; scan path-mapping requirements):**
   - List autoscan-style hooks and offer removal after our connection is verified.
-  - Suggest path mappings derived from the same file seen by both sides.
+  - Suggest a mapping when sampled recent imports line up under exactly one visible folder, with the match count; never applied unconfirmed.
 - **V:** fixtures; `live` dry run.
 - **Dep:** 3.3, 2.1.
 - **Files:** `crates/arr/src/{migrate,suggest}.rs`.

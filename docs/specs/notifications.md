@@ -16,11 +16,11 @@ Tell the admin about failures, health changes, parity findings and activity on t
 - **Generic webhook:** a JSON POST of `{events:[{type, category, timestamp, summary, details}]}` with optional headers.
 
 ## Event catalogue
-Each event belongs to a category. Users subscribe at the level of individual event types. These 27 types are the v1 catalogue *(final 2026-11-10)*.
+Each event belongs to a category. Users subscribe at the level of individual event types. These 29 types are the v1 catalogue *(final 2026-11-10)*.
 
 | Category | Event types |
 |---|---|
-| Failures & health | `target.unavailable`, `target.recovered`, `remote.unhealthy`, `remote.quota`, `remote.recovered`, `anchor.missing`, `anchor.restored`, `item.deadlettered`, `downloader.error`, `arr.connection.drift`, `gdrive.account.revoked`, `gdrive.monitor.stopped`, `component.failing`, `rclone.unsupported`, `backup.failed` |
+| Failures & health | `target.unavailable`, `target.recovered`, `remote.unhealthy`, `remote.quota`, `remote.recovered`, `anchor.missing`, `anchor.restored`, `item.deadlettered`, `downloader.error`, `arr.connection.drift`, `arr.unavailable`, `arr.recovered`, `gdrive.account.revoked`, `gdrive.monitor.stopped`, `component.failing`, `rclone.unsupported`, `backup.failed` |
 | Library parity | `parity.mismatch.found`, `parity.fix.applied`, `parity.fix.failed`, `parity.merged.manual`, `parity.run.completed` |
 | Uploads | `upload.completed` (aggregated), `upload.failed`, `downloader.paused`, `downloader.resumed`, `throttle.changed` |
 | Scans | `scan.delivered` (aggregated), `scan.failed` |
@@ -46,7 +46,7 @@ Notes on the health events *(added 2026-10-30)*:
 
 ## Keeping the noise down
 *(decided 2026-11-10)*
-- **Only problems that last.** A problem event notifies only once the problem has lasted 2 minutes (configurable). This applies to `target.unavailable`, `remote.unhealthy`, `anchor.missing`, `downloader.error` and `gdrive.monitor.stopped`.
+- **Only problems that last.** A problem event notifies only once the problem has lasted 2 minutes (configurable). This applies to `target.unavailable`, `arr.unavailable`, `remote.unhealthy`, `anchor.missing`, `downloader.error` and `gdrive.monitor.stopped`.
   - The matching recovery event is sent only if the problem was sent.
   - A source that keeps flipping is reported once as unstable, not on every flip.
   - The Health page always shows the current state at once, whatever was notified.
@@ -86,4 +86,4 @@ Notes on the health events *(added 2026-10-30)*:
 - **Never:** Include secrets in notification bodies.
 
 ## Open questions
-- ~~Final event catalogue~~ (**decided 2026-11-10:** the 27 types above).
+- ~~Final event catalogue~~ (**decided 2026-11-10:** the 29 types above).
