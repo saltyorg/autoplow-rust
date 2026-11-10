@@ -61,7 +61,7 @@ Common to all triggers:
 - **Path must exist (optional):** per trigger and per target. Add and change entries are held until the folder exists. Deletes are exempt.
   - The check is made on the host, at the path as Autoplow sees it. Autoplow cannot look inside a media server.
   - It is retried with growing gaps for up to 1 hour (configurable). After that the entry becomes a dead letter saying the folder never appeared *(decided 2026-11-10)*.
-- **Deletes** *(decided 2026-11-10)*: a delete scans the path that was removed, not its parent, so removing a whole show or movie directly under a library root does not need a root scan.
+- **Deletes** *(decided 2026-11-10)*: a deleted **folder** scans the path that was removed, not its parent, so removing a whole show or movie directly under a library root does not need a root scan. A deleted **file** scans its parent folder, like any other file event.
   - Each server's platform note records that scanning a missing path removes just that item.
   - For a server where it does not, the entry is reported on the Scans page as needing a library scan, and nothing is sent.
 - **Anchors:**
@@ -76,8 +76,8 @@ Common to all triggers:
   - Target-level errors trigger exponential backoff for that target only, honouring `Retry-After`.
   - Per-path errors are retried with backoff.
   - The UI shows why each entry is waiting.
-- **Dead letters** *(added 2026-10-30)*: an entry that keeps failing for a path-level reason (for example "no library contains this path") is dead-lettered after 5 attempts (configurable) and raises `item.deadlettered`. Target-level outages never dead-letter; those entries wait for the target.
-  - The UI offers **Retry** and **Discard** for each one, and **Discard all** per target.
+- **Dead letters** *(added 2026-10-30)*: an entry that keeps failing for a path-level reason (for example the server refuses the path) is dead-lettered after 5 attempts (configurable) and raises `item.deadlettered`. Target-level outages never dead-letter; those entries wait for the target.
+  - The UI offers **Retry** and **Discard** for each one, and **Discard all** per target. **Edit** opens the path mapping the entry went through, so it can be corrected before a retry.
   - Dead letters are pruned automatically after 30 days (configurable).
 - **History:** delivered scans are kept for 7 days (configurable) and can be shown on the Scans page.
 
@@ -102,13 +102,20 @@ Common to all triggers:
 - How to discover Tofa's library root paths.
 - ~~Evaluate autopulse's scan approach~~: done. Approach A stays the only mode (see [ADR-0009](../decisions/0009-folder-level-scans-only.md)).
 
+## Events raised
+These are the notification types this module raises (the catalogue is in [notifications.md](notifications.md)).
+- `anchor.missing`, `anchor.restored`: an anchor file disappears or returns.
+- `item.deadlettered`: an entry becomes a dead letter.
+- `scan.failed`: a delivered scan fails its post-delivery verification.
+- `scan.delivered`: scans were delivered; aggregated.
+
 ## Acceptance criteria
 1. An Arr `Download` for a file queues exactly one scan per target whose library contains the file's parent folder by path components; `Test` events queue nothing and return 2xx.
 2. Two events for the same folder within the minimum age produce one delivery; an event arriving after a delivery was dispatched always produces another delivery (generation acknowledgement).
 3. A queued parent folder absorbs later child folders for the same target; a child queued first is replaced when its parent arrives.
 4. With a target offline, deliveries to other targets continue unaffected; the offline target's entries are retained across restart and delivered after it recovers (exponential backoff honouring `Retry-After`).
 5. Every queued entry exposes a wait reason (debounce, max-wait pending, anchor missing, path missing, target backoff, target disabled, ready) via the API.
-6. Delete events skip the existence check; with the optional 'path must exist' check enabled, add/change entries are held until the path exists or a timeout warning is raised.
+6. Delete events skip the existence check; with the optional 'path must exist' check enabled, add/change entries are held until the path exists (see AC16 for one that never does).
 7. With any applicable anchor missing, no delivery (and never a delete) is sent for the affected scope.
 8. `/mnt/Movies` never matches a library at `/mnt/Movies4K`; a folder contained by locations in two libraries is delivered to both.
 9. Jellyfin/Emby deliveries for one target are batched into one `Media/Updated` call per delivery cycle (bounded batch size); Plex receives one request per folder.

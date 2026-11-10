@@ -45,7 +45,7 @@ Based on the bernard and autoplow designs.
    - Resolve every change to its old and new paths through the snapshot tree.
 3. **Events produced:**
    - **Add or change:** a scan of the parent folder.
-   - **Trash or delete:** a scan of the former parent folder, without an existence check.
+   - **Trash or delete:** for a file, a scan of its former parent folder; for a folder, a scan of the removed folder's own path (see the scan spec). Neither has an existence check.
    - **Rename or move:** a scan of both the old and the new folder.
    - Folder-level changes become a scan of the folder itself.
    - Redundant child paths are pruned.
@@ -108,6 +108,11 @@ A read-only view of what the snapshot holds for a monitor:
 ## Not in v1
 - Service accounts.
 - Using tokens from `rclone.conf` (possible later). Crypt remotes use only the crypt settings from `rclone.conf`, not its tokens.
+
+## Events raised
+These are the notification types this module raises (the catalogue is in [notifications.md](notifications.md)).
+- `gdrive.account.revoked`: Google no longer accepts an account's sign-in.
+- `gdrive.monitor.stopped`: a monitor stopped itself (lost access, or names that do not decrypt). It has no recovery event; the monitor's state is on its page.
 
 ## Acceptance criteria
 1. A user with their own OAuth web client can connect an account from the UI; refresh tokens are stored encrypted and survive key rotation.

@@ -30,7 +30,7 @@ Notes on the health events *(added 2026-10-30)*:
 - `gdrive.monitor.stopped`: a monitor stopped for a reason of its own, such as a missing crypt remote or names that mostly fail to decrypt.
 - `rclone.unsupported`: the rclone in use is older than the minimum this Autoplow release supports, so uploads and crypt name decoding are off until it is updated. Raised once per start, not repeatedly.
 - `backup.failed`: a scheduled or on-demand database backup failed.
-- `component.failing`: a background component restarted 3 times within 10 minutes (the default) and is still restarting with backoff. Single restarts are only logged.
+- `component.failing`: a background component restarted 3 times within 10 minutes and is still restarting with backoff. Single restarts are only logged.
 
 ## What a message contains
 - **Fixed format:** a title, one or two sentences in plain words, a severity (problem, recovered or information), the time in the configured time zone, and a link to the Autoplow page where it can be acted on.
@@ -46,9 +46,9 @@ Notes on the health events *(added 2026-10-30)*:
 
 ## Keeping the noise down
 *(decided 2026-11-10)*
-- **Only problems that last.** A problem event notifies only once the problem has lasted 2 minutes (configurable). This applies to `target.unavailable`, `arr.unavailable`, `remote.unhealthy`, `anchor.missing`, `downloader.error` and `gdrive.monitor.stopped`.
-  - The matching recovery event is sent only if the problem was sent.
-  - A source that keeps flipping is reported once as unstable, not on every flip.
+- **Only problems that last.** A problem event notifies only once the problem has lasted the **problem delay**, 2 minutes by default (configurable, one value for all). The module that owns the state does the waiting and raises the event when the time is up; the dispatcher adds no wait of its own. This applies to `target.unavailable`, `arr.unavailable`, `remote.unhealthy`, `anchor.missing`, `downloader.error` and `gdrive.monitor.stopped`.
+  - The matching recovery event, for the types that have one, is sent only if the problem was sent.
+  - A source that keeps flipping is reported once, under the same event type with a message saying it is unstable, not on every flip.
   - The Health page always shows the current state at once, whatever was notified.
 - **Storms.** When more than 20 messages of one type are waiting for one channel, they collapse into a single summary: the count, the time span, up to five examples and a link. While the storm continues, a further summary is sent at most every 15 minutes.
 
@@ -61,7 +61,7 @@ Notes on the health events *(added 2026-10-30)*:
 - **Order:** messages for one channel are sent in the order their events happened. A message about a source waits for an earlier one about the same source, so "recovered" never arrives before "unavailable".
 - **What can't be notified:** a problem that stops Autoplow writing to its database can't be recorded for delivery. It shows on the Health page and in the log only.
 - **Undelivered messages** *(added 2026-10-30)*:
-  - The UI offers **Send again** and **Discard** for each one, and **Discard all** per channel.
+  - The UI offers **Resend** and **Discard** for each one, and **Discard all** per channel.
   - They are pruned automatically after 30 days (configurable), so they can't pile up when nobody acts on them.
 - **Disabled channels:** a channel can be switched off. While it is off, nothing is queued for it, and switching it back on doesn't send what was missed.
 - **Retention:** delivered messages are pruned after 7 days (configurable).

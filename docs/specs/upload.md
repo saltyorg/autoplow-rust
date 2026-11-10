@@ -74,22 +74,25 @@ This consolidates the upload decisions in the ADRs in [../decisions/](../decisio
 - **Schedule windows:**
   - New transfers start only inside a window.
   - Transfers already in flight finish when the window closes.
-- **Throttle:** bandwidth tiers by stream count, plus optionally "no new transfers above N streams" (see the throttle spec).
+- **Throttle:** bandwidth tiers by stream count, plus optionally "no new transfers above N streams". Both belong to the [throttle spec](throttle.md); for the second, throttle places a hold here and lifts it again.
 - **Manual controls** (rclone cannot pause a transfer, so there is no "pause"):
-  - **Hold new uploads:** a toggle. While on, no new transfer starts; transfers in flight finish. The hold is persisted and survives a restart.
+  - **Hold new uploads:** a toggle. While on, no new transfer starts; transfers in flight finish. The hold is persisted and survives a restart. A hold placed by throttle (too many streams) is separate from the admin's: it shows its reason, and lifting one never lifts the other.
   - **Stop:** for one transfer or all of them. Calls rclone `job/stop`; the source stays intact and the file is re-queued. A re-queued file restarts from the beginning unless the backend resumes uploads.
 
 ## Pausing download clients
-The clients themselves, and the guarantee that a paused client is always resumed, belong to [the downloaders spec](downloaders.md) *(moved 2026-11-10)*. This module only decides when to ask for a pause.
-- **Applies to:** clients that can be paused (SABnzbd and NZBGet in v1).
-- **Conditions,** set per client:
-  - **while uploads are active:** the pause ends after the queue has been idle for a grace period
-  - **disk-space guard:** pause below a free-space threshold
+The clients themselves, and the guarantee that a paused client is always resumed, belong to [the downloaders spec](downloaders.md) *(moved 2026-11-10)*. The pause conditions and their values (while uploads run, free space) are defined there too. This module only reports when its queue becomes active and when it has gone idle.
 
 ## Not in v1
 - Server-side mover.
 - unionfs hidden-file cleaning.
 - Service-account rotation.
+
+## Events raised
+These are the notification types this module raises (the catalogue is in [notifications.md](notifications.md)).
+- `upload.completed`: files finished uploading; aggregated.
+- `upload.failed`: a file is marked failed.
+- `remote.unhealthy`, `remote.quota`: every remote of a destination is cooling down, for errors or for a limit.
+- `remote.recovered`: a remote that was reported is usable again.
 
 ## Acceptance criteria
 1. A file becomes eligible only after its readiness rules pass; any mtime change restarts its age clock.
@@ -112,6 +115,7 @@ The clients themselves, and the guarantee that a paused client is always resumed
 18. A file that fails 5 times is marked failed, listed with Retry and Discard, and Discard leaves the local file in place.
 19. An upload-limit error cools the remote down for the configured time and five failures in a row for a growing time; with every remote cooling down, files wait and the matching event is raised.
 20. A destination whose local path overlaps another's is refused.
+21. A hold placed by throttle and the admin's hold are independent: each shows its reason, and lifting one leaves the other in place.
 
 ## Boundaries
 - **Always:** follow `CONSTRAINTS.md`; validate external input at the boundary.

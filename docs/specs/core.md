@@ -33,16 +33,18 @@ Provide the foundation every module builds on. A component can be restarted when
   - Compare-and-set helpers.
   - **Upgrades:** a consistent copy of the database is taken before migrations run. If a migration fails, Autoplow stops and says how to put the copy back.
   - **Downgrades:** a database from a newer Autoplow is refused at start, with a clear message. Nothing is changed.
-  - **Backups** *(decided 2026-11-10)*: a failed backup raises `backup.failed`. A consistent copy daily, keeping the last 7 (both configurable), plus on demand from the UI and API. Copies live in the data directory. **Rebuildable data** (Drive snapshots, cached library lists) is left out of every copy, so backups stay small; it stays in the same database so that it can be updated in one transaction with the work it belongs to. Restoring is replacing the database file while Autoplow is stopped; the documentation gives the steps.
+  - **Backups** *(decided 2026-11-10)*: a failed backup raises `backup.failed`. A consistent copy daily, keeping the last 7 (both configurable), plus on demand from the UI and API. Copies live in the data directory. **Rebuildable data** (Drive snapshots, cached library lists) is left out of every copy, so backups stay small; it stays in the same database so that it can be updated in one transaction with the work it belongs to.
+  - **Restoring** *(decided 2026-11-10)*: `autoplow restore <file>`, run on the host as the service user while the service is stopped. It checks that the file is a consistent Autoplow database, refuses one from a newer version, keeps a copy of the current database first, and upgrades an older backup on the next start. Nothing in the UI or API can replace the database.
   - **When the database can't be written** (disk full, read-only): incoming triggers are refused with 503 and `Retry-After`, never accepted and lost. The Health page shows the cause, and work resumes on its own when writing succeeds again.
 - **Paths:**
   - `FolderPath`, compared by components.
   - Rewrite rule sets per trigger, per target and per pair, with overlaps rejected within a set.
   - Library containment.
   - The picker backends: a local filesystem browser, and proxies to other modules' listings.
+  - **What the filesystem browser shows** *(decided 2026-11-10)*: any folder the service account can read, as folder and file names only. It never returns file contents, never follows a request outside the folder asked for (`..` is refused), and needs an admin session or a full-access key.
 - **Auth:**
   - A single admin user (argon2).
-  - **Sign-in can be switched off** *(decided 2026-11-10)*, for installs where a reverse proxy already authenticates every browser request. It only affects the UI: API keys and trigger tokens are always required on their routes, and those routes never depend on a browser sign-in. The setting warns that anyone who can reach the port then has admin access.
+  - **Sign-in can be switched off** *(decided 2026-11-10)*, for installs where a reverse proxy already authenticates every browser request. With it off, the UI is given a session without asking for a password. Nothing else changes: a script still needs an API key and a trigger its token. This is not a security boundary, and the setting says so: anyone who can reach the port can open the UI and so has admin access.
   - **Forgotten password:** `autoplow reset-password`, run on the host as the service user, sets a new one and signs out all sessions.
   - API keys, admin or read-only. A key can be regenerated; the old one stops working at once.
   - UI sessions with CSRF protection. A session lasts 30 days from its last use. Signing out ends it, and changing the password ends every other session.
@@ -73,12 +75,17 @@ Provide the foundation every module builds on. A component can be restarted when
   - `tracing` logs with a level per component, with secrets redacted by type.
   - **Where logs go** *(decided 2026-11-10)*: standard output, for the journal, and a log file. Autoplow rotates the file daily or at 50 MB and keeps the last 7 (configurable). Levels can be changed per component while running. There is no log viewer in the UI in v1.
   - Prometheus `/metrics`, which needs a read-only API key.
-  - `/health` and readiness, open to anyone and answering only ok or not ok. The detail is on the Health page.
+  - `/health`, open to anyone and answering only ok or not ok. The detail is on the Health page.
   - An SSE event stream. It does not replay missed events: after a reconnect the UI reloads what it shows. A client too slow to keep up is disconnected and reconnects.
 - **UI shell:**
   - Leptos CSR app embedded in the binary: login, navigation, the live event client.
   - Follows the [UI rules](ui.md): tokens, accent, density, the sidebar, and dialog behaviour live in the shell.
   - An API client from `api-types`.
+
+## Events raised
+These are the notification types this module raises (the catalogue is in [notifications.md](notifications.md)).
+- `component.failing`: a background component keeps restarting.
+- `backup.failed`: a backup could not be taken.
 
 ## Acceptance criteria
 1. Killing a component task, or making it panic, leads the supervisor to restart it with backoff while other components keep running. A panic is logged with the component name. A third restart within 10 minutes raises `component.failing`.
@@ -95,7 +102,7 @@ Provide the foundation every module builds on. A component can be restarted when
 8. Steady-state RSS with an empty configuration is ≤ 64 MB, and idle CPU is ≤ 1 % of one core.
 9. The UI shell passes the Playwright login test and has zero serious or critical axe violations.
 10. Without `AUTOPLOW_SECRET_KEY`, or with a wrong one, Autoplow refuses to start and changes nothing. Starting with a new key and the old one in `AUTOPLOW_SECRET_KEY_OLD` re-encrypts every secret, and the old key then no longer works.
-11. With sign-in switched off, UI routes need no session, while a write API route without a key still gets 401 and a trigger route without its token is still refused.
+11. With sign-in switched off, opening the UI gives a session without a password; an API request with neither a session nor a key still gets 401, and a trigger route without its token is still refused.
 12. `autoplow reset-password` sets a new password and ends all sessions. Changing the password in the UI ends every other session.
 13. A lockout caused by one client address does not affect another. Behind a trusted proxy the forwarded address is used; a forwarded header from an untrusted address is ignored.
 14. A copy of the database is taken before migrations and daily, without the rebuildable data; only the configured number is kept; a backup on demand produces a file that opens as a consistent database. A database from a newer version is refused at start.
@@ -106,6 +113,8 @@ Provide the foundation every module builds on. A component can be restarted when
 19. A feature whose required capability is missing reports itself as off, with the reason, on the Health page, and the rest of Autoplow runs normally.
 20. The outbound client enforces its timeouts and size cap, honours `Retry-After`, refuses a self-signed certificate unless that connection's check is switched off, and never logs a token.
 21. With the update check on, a newer release is shown on About and Health within a day and no notification is raised; with it off, no request is made. The request carries nothing that identifies the install.
+22. `autoplow restore` refuses to run while the service is running, refuses a file that is not a consistent Autoplow database or comes from a newer version, and keeps a copy of the database it replaces. After a restore and start, the restored data is served.
+23. The filesystem browser lists names in a readable folder, returns no file contents, refuses a path containing `..`, and answers 403 to a read-only key.
 
 ## Boundaries
 - **Always:** follow `CONSTRAINTS.md`; keep wall-clock time behind the `Clock` trait.

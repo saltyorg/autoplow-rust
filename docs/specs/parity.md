@@ -91,6 +91,13 @@ Based on autoplow's phased approach, with fixes.
   - **notify** the user to handle it manually, via the notification system
   - **auto-split** (`PUT /library/metadata/{id}/split`) followed by verification
 
+## Events raised
+These are the notification types this module raises (the catalogue is in [notifications.md](notifications.md)).
+- `parity.mismatch.found`: new findings since the previous run.
+- `parity.run.completed`: a full check finished, including whether automatic fixing was suspended.
+- `parity.fix.applied`, `parity.fix.failed`: a fix was verified, or failed or did not verify.
+- `parity.merged.manual`: a merged item needs handling by hand (the Plex target is set to notify).
+
 ## Acceptance criteria
 1. For each configured Arr×server pair, a run lists ID mismatches, gaps (both directions), per-episode/movie file mismatches and merged items; items on unknown agents are reported, never modified.
 2. Joins use path components through the scoped rewrite rules; a library of 500 000 items completes a run without exceeding the resource budget.

@@ -39,7 +39,7 @@ Behaviour each client must respect is recorded in `docs/platform-notes/`.
 |---|---|
 | Healthy | The last call succeeded. |
 | Backing off | A call failed at the target level (no connection, 5xx, 429). Calls wait: 30 s, doubling to at most 15 minutes, or as `Retry-After` says. |
-| Unavailable | It has been backing off for 2 minutes. This is what notifies (see the notifications spec). |
+| Unavailable | It has been backing off for the problem delay (2 minutes by default; see the notifications spec). `target.unavailable` is raised now, and `target.recovered` when it is healthy again. |
 | Disabled | Switched off by the admin. |
 
 - **Recovery:** while not healthy, a light status call is tried on the backoff schedule even with nothing queued, so recovery is noticed.
@@ -53,6 +53,10 @@ Behaviour each client must respect is recorded in `docs/platform-notes/`.
 ## Changes on the server
 - Library lists refresh periodically and on a lookup miss.
 - A library that disappears, or whose folders change, raises a warning on the target and marks the path mappings that no longer lead anywhere.
+
+## Events raised
+These are the notification types this module raises (the catalogue is in [notifications.md](notifications.md)).
+- `target.unavailable`, `target.recovered`: see the health states above.
 
 ## Acceptance criteria
 1. Each client passes contract tests against recorded fixtures, covering every request it makes and every response shape it parses, including error and `Retry-After` cases.

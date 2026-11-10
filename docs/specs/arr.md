@@ -31,7 +31,7 @@ Talk to every Arr instance correctly: receive and parse their webhooks, and keep
 
 ## Reaching the Arr
 - The Arr's API is called through the core outbound client, with the same per-connection options as a target: timeouts and a switch for the certificate check.
-- **Unreachable or refused** (no connection, or the API key no longer works): the Arr is shown as unavailable on its row and on the Health page. It raises `arr.unavailable` once that has lasted 2 minutes, and `arr.recovered` afterwards. Reconciling resumes on its own.
+- **Unreachable or refused** (no connection, or the API key no longer works): the Arr is shown as unavailable on its row and on the Health page. It raises `arr.unavailable` once that has lasted the problem delay (2 minutes by default; see the notifications spec), and `arr.recovered` afterwards. Reconciling resumes on its own.
 
 ## The managed connection
 | Field | Value |
@@ -65,7 +65,7 @@ Notes on the fixed event set:
      - `tags == []`
      - name
    - **Drift** means any difference. It is fixed with a **full PUT**, sending all fields, and an `arr.connection.drift` notification is sent.
-   - **Missing** means the connection was deleted. It is re-created and a notification is sent.
+   - **Missing** means the connection was deleted. It is re-created and `arr.connection.drift` is raised.
 3. **Unmanage:** done in our UI only. The user can remove the connection from the Arr, or leave it in place but stop reconciling.
 4. **Removing the Arr from the app:** deletes our connection from the Arr (a confirmation dialog in the UI).
 
@@ -81,6 +81,11 @@ Notes on the fixed event set:
 - **`Test` events:** answered with 2xx; nothing is queued.
 - **Unknown events:** answered with 2xx and logged at debug level. They never return 500.
 - **Request bodies:** limited in size.
+
+## Events raised
+These are the notification types this module raises (the catalogue is in [notifications.md](notifications.md)).
+- `arr.unavailable`, `arr.recovered`: see "Reaching the Arr".
+- `arr.connection.drift`: the managed connection was changed or deleted in the Arr and has been put back.
 
 ## Acceptance criteria
 1. Sonarr v4/v5, Radarr, Lidarr and Whisparr v2/v3 are detected from `system/status` and handled with the right API flavour.

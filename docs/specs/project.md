@@ -57,7 +57,7 @@ These are planned and wired in Task 0.1; `CONSTRAINTS.md` is canonical.
 ```
 Build:        cargo build --workspace --release
 UI build:     trunk build --release            (in crates/ui)
-Run (dev):    cargo run -p autoplow -- --config ./dev/config --bootstrap ./dev/bootstrap.yml
+Run (dev):    cargo run -p autoplow -- --data ./dev/data --bootstrap ./dev/bootstrap.yml
 Tests:        cargo nextest run --workspace
 Coverage:     cargo llvm-cov nextest --lcov --output-path lcov.info && diff-cover lcov.info --compare-branch=origin/main --fail-under=90
 Mutation:     cargo mutants --in-diff <(git diff origin/main) && scripts/check-mutants.sh mutants.out 80

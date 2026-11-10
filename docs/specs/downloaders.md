@@ -7,7 +7,7 @@ Talk to the user's download clients and be the **single owner** of what Autoplow
 
 ## Non-goals
 - Managing downloads, queues, categories or torrents
-- Deciding *when* to pause or limit (that belongs to `upload` and `throttle`)
+- Knowing whether uploads are running or how many streams there are (`upload` and `throttle` tell it)
 - Changing any client setting other than pause state and the global speed limits
 
 ## Clients
@@ -54,6 +54,11 @@ Talk to the user's download clients and be the **single owner** of what Autoplow
 - **Guarantees:**
   - A client paused by Autoplow is always resumed: when the last pause reason ends, on error, on shutdown, and by reconcile after a crash.
   - A client limited by Autoplow always gets its idle limit back under the same conditions.
+
+## Events raised
+These are the notification types this module raises (the catalogue is in [notifications.md](notifications.md)).
+- `downloader.paused`, `downloader.resumed`: Autoplow paused or resumed a client.
+- `downloader.error`: a client is unreachable, rejects a call, or an override is detected. It has no recovery event; the client's state is on the Health page.
 
 ## Acceptance criteria
 1. SABnzbd, NZBGet and qBittorrent can be added, tested and removed; credentials are stored encrypted and never appear in logs.

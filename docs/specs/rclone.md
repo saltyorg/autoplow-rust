@@ -42,6 +42,10 @@ Run and supervise `rclone rcd` as a private child process, and give `upload`, `t
 - **Polling:** completion and progress, by job ID and group.
 - **Cleanup:** finished stats groups are swept.
 
+## Events raised
+These are the notification types this module raises (the catalogue is in [notifications.md](notifications.md)).
+- `rclone.unsupported`: the rclone found is older than the minimum.
+
 ## Acceptance criteria
 1. The child starts and answers `rc/noop` within 5 s. The socket isn't reachable over the network, and its directory is 0700.
 2. Killing the child (`SIGKILL`) is detected within 5 s. It restarts with backoff, and the module reports "job state lost" so `upload` re-queues.

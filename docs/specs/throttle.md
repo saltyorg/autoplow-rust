@@ -1,6 +1,6 @@
 # Spec: the throttle (v1)
 
-**Module:** `throttle` · **Depends on:** targets, rclone, downloaders · **Decisions:** ADR-0003, ADR-0017 · **Status:** approved 2026-10-27; download-client limits approved 2026-11-10
+**Module:** `throttle` · **Depends on:** core, targets, rclone, downloaders, upload · **Decisions:** ADR-0003, ADR-0017 · **Status:** approved 2026-10-27; download-client limits approved 2026-11-10
 
 ## Objective
 Keep other traffic from degrading playback: adapt rclone's upload bandwidth and the download clients' speed limits to active streams on all media servers, robustly against bad session data. Each of these works on its own: a user can limit download clients without using Autoplow's uploads at all.
@@ -71,9 +71,13 @@ Keep other traffic from degrading playback: adapt rclone's upload bandwidth and 
 ## Effects
 - **rclone:** the limit is applied through rclone `core/bwlimit`. Bandwidth is shared by every transfer, as with the rclone CLI.
 - **Download clients:** the limits are handed to the `downloaders` module, which applies them and keeps them applied. The throttle never calls a client itself.
-- Optionally, no new uploads start above N streams. Transfers already running continue, throttled.
-- A limiter whose target is unavailable (rclone restarting, a client unreachable) does not hold up the others.
+- Optionally, no new uploads start above N streams. Throttle places a hold on uploads (see the upload spec) and lifts it when the count drops; transfers already running continue, throttled. The setting is with the counting options on the Throttle page.
+- A limiter whose rclone or client is unavailable (rclone restarting, a client unreachable) does not hold up the others.
 - Every change is published on the event stream and the metrics.
+
+## Events raised
+These are the notification types this module raises (the catalogue is in [notifications.md](notifications.md)).
+- `throttle.changed`: a limiter's limit changed; several at once are grouped.
 
 ## Acceptance criteria
 1. Each media server's sessions are counted once, whichever transport (websocket or polling) delivered them.

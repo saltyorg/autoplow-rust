@@ -47,12 +47,12 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** S.
 
 ### Task 0.3: Store and migrations
-- [ ] **AC (core AC4, AC14–AC16, gdrive AC14):**
+- [ ] **AC (core AC4, AC14–AC16, gdrive AC14 in part):**
   - SQLite in WAL mode, one writer and a reader pool.
   - Embedded, versioned migrations, with a copy taken first; a newer database is refused.
   - Compare-and-set helper.
   - Migration fixtures.
-  - Daily and on-demand backups with a keep count, leaving out rebuildable data (gdrive AC14).
+  - Daily and on-demand backups with a keep count, leaving out rebuildable data (the backup half of gdrive AC14; rebuilding after a restore is in 6.2).
   - Unwritable database: triggers get 503 with `Retry-After`; recovery without restart.
   - One instance per data directory.
 - **V:** migration-up tests; writer-serialisation test; read-only database test; second-instance test.
@@ -84,12 +84,13 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** M.
 
 ### Task 0.6: HTTP server, auth and secrets
-- [ ] **AC (core AC6, AC7, AC10–AC13, AC17):**
+- [ ] **AC (core AC6, AC7, AC10–AC13, AC17, AC22):**
   - `/api/v1`, RFC 9457 errors, body limits, open `/health`, OpenAPI.
   - API keys (admin, read-only); `/metrics` needs a key.
   - Argon2 admin user; sessions (30 days, sign out, ended on password change); sign-in can be switched off for the UI only.
   - Login lockout per client address, with trusted proxies.
   - `autoplow reset-password`.
+  - `autoplow restore <file>` (core AC22).
   - Secret key from the environment only: refuse to start without it or with a wrong one; rotation with the old key supplied once.
   - Secrets never in list or resource responses; the admin-only secret endpoint.
 - **V:** auth matrix tests; a seeded-secret grep over logs and responses; start-up tests for missing, wrong and rotated keys; lockout tests with and without a trusted proxy.
@@ -150,7 +151,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
   - Update check: daily, shown on About and Health, with its switch under General.
   - Settings save as they change.
 - **V:** Playwright plus axe; WASM budget.
-- **Dep:** 0.9.
+- **Dep:** 0.9, 0.11.
 - **Files:** `crates/ui/src/pages/{health,settings/*}.rs`.
 - **Size:** M.
 
@@ -176,7 +177,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** M.
 
 ### Task 1.2: Channels, subscriptions and UI
-- [ ] **AC (notifications AC4–AC6, AC11, AC12):**
+- [ ] **AC (notifications AC4–AC6, AC11, AC12; ui AC10: Notifications, Channel):**
   - Discord, Apprise and webhook channels.
   - Subscriptions per event type; one filter per channel; Test; fixed message format with a link.
   - Disable a channel without backfill on re-enable.
@@ -203,12 +204,12 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
   - Library cache refreshed periodically and on a miss.
   - Component-based containment, multi-library resolution.
 - **V:** unit tests and recorded fixtures.
-- **Dep:** 0.2, 0.11.
+- **Dep:** 0.2, 0.11, 1.1.
 - **Files:** `crates/targets/src/{pacing,health,libraries}.rs`.
 - **Size:** M.
 
 ### Task 2.2: Plex client
-- [ ] **AC (targets AC1, AC7, AC13):**
+- [ ] **AC (targets AC1, AC5, AC7, AC13):**
   - Sign in with Plex, or a pasted token.
   - Sections with paging headers.
   - `refresh?path=`.
@@ -220,7 +221,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** M.
 
 ### Task 2.3: Jellyfin and Emby clients
-- [ ] **AC (targets AC1, AC6):**
+- [ ] **AC (targets AC1, AC5, AC6):**
   - Batched `Media/Updated` (Modified for Jellyfin, Created for Emby).
   - Library listing.
   - Sessions websocket.
@@ -232,7 +233,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** M.
 
 ### Task 2.4: Tdarr, Autoplow and Tofa (provisional) clients
-- [ ] **AC (targets AC1, AC5):**
+- [ ] **AC (targets AC1):**
   - Tdarr `scan-files`.
   - Autoplow generic trigger.
   - Tofa scoped scan and session polling, behind a capability flag.
@@ -254,7 +255,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
   - Root folders.
   - Filesystem API proxy for the path picker.
 - **V:** fixtures per flavour.
-- **Dep:** 0.6.
+- **Dep:** 0.6, 0.7, 0.11, 1.1.
 - **Files:** `crates/arr/src/{client,detect}.rs`.
 - **Size:** S.
 
@@ -286,7 +287,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
   - List autoscan-style hooks and offer removal after our connection is verified.
   - Suggest a mapping when sampled recent imports line up under exactly one visible folder, with the match count; never applied unconfirmed.
 - **V:** fixtures; `live` dry run.
-- **Dep:** 3.3, 2.1.
+- **Dep:** 3.3.
 - **Files:** `crates/arr/src/{migrate,suggest}.rs`.
 - **Size:** M.
 
@@ -318,7 +319,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
   - Per-path dead-letter, with retry, discard, discard all and 30-day pruning.
   - Batching (Jellyfin/Emby), one request per folder (Plex).
 - **V:** an offline fake target doesn't block the others; a 400 dead-letters one path only.
-- **Dep:** 4.1, 2.2, 2.3.
+- **Dep:** 4.1, 2.2, 2.3, 1.1.
 - **Files:** `crates/scan/src/worker.rs`.
 - **Size:** M.
 
@@ -358,7 +359,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 ### Task 4.6: Anchors, "path must exist", verified Plex empty trash
 - [ ] **AC (scan AC6, AC7, AC16, Plex trash row):**
   - "Path must exist" checked on the host; dead-lettered after 1 hour if the folder never appears.
-  - Anchors at any scope; all applicable anchors required.
+  - Anchors (a file, its targets and an optional folder); all applicable anchors required.
   - Hold-and-retry existence check; deletes exempt.
   - Empty trash only after the scan is observed to complete.
   - Settings › Anchors with its dialog (ui AC10).
@@ -390,13 +391,14 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** M.
 
 ### Task 4.9: Trigger and target UI with path picker
-- [ ] **AC (scan path rules; targets AC6):**
+- [ ] **AC (scan path rules; targets AC6; core AC23; ui AC10: Triggers, Trigger, Add trigger, Add Arr instance, Targets, Target, Add target):**
   - CRUD pages for triggers and targets.
   - Webhook URL and credential copy.
-  - Rewrite editor with a filesystem picker per side.
+  - Rewrite editor with a filesystem picker per side; the filesystem browser endpoint (names only, admin only).
+  - The Add Arr instance steps, with mapping suggestions and older webhooks.
   - Target warnings.
 - **V:** Playwright plus axe; WASM budget.
-- **Dep:** 4.4, 3.1, 0.9.
+- **Dep:** 4.4, 3.4, 0.9.
 - **Files:** `crates/ui/src/pages/{triggers,targets,paths}.rs`.
 - **Size:** M.
 
@@ -428,7 +430,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
   - Host SIGTERM isolated from rclone's hook.
   - Crypt `decode` via `backend/command`, batched (rclone AC8).
 - **V:** integration tests with crypt over local; `kill -9` the child; 24-hour soak (group count bounded).
-- **Dep:** 0.4.
+- **Dep:** 0.4, 1.1.
 - **Files:** `crates/rclone/src/{child,client,jobs}.rs`.
 - **Size:** M.
 
@@ -456,12 +458,12 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
   - `gdrive.account.revoked` on revocation.
   - Settings › Google Drive: redirect URI check, OAuth clients and accounts with dialogs, setup guide (ui AC10).
 - **V:** fake OAuth server; Playwright plus axe.
-- **Dep:** 0.6, 0.10.
+- **Dep:** 0.6, 0.10, 1.1.
 - **Files:** `crates/gdrive/src/{oauth,accounts}.rs`.
 - **Size:** M.
 
 ### Task 6.2: Drive monitors
-- [ ] **AC (gdrive AC2–AC5, AC11–AC13, AC15, AC16):**
+- [ ] **AC (gdrive AC2–AC5, AC11–AC13, AC14 in part (a snapshot is rebuilt after a restore), AC15, AC16):**
   - Folder-limited monitors; one snapshot per drive; first snapshot silent and resumable.
   - Shortcuts, multiple parents, restored items and Google documents.
   - Lost shared-drive access stops the monitor.
@@ -480,21 +482,21 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - [ ] **AC (gdrive AC6):**
   - Snapshot stores encrypted and decrypted names; polls decode only unseen names.
   - Rewrite rules and filters match decrypted paths.
-  - Undecryptable names produce no scan and a change-log entry; a missing crypt remote stops the monitor with `health`.
+  - Undecryptable names produce no scan and a change-log entry; a missing crypt remote stops the monitor with `gdrive.monitor.stopped`.
 - **V:** fake Drive API serving names encrypted by a real crypt-over-local remote.
 - **Dep:** 6.2, 5.1.
 - **Files:** `crates/gdrive/src/crypt.rs`, `crates/gdrive/src/snapshot.rs`, `docs/platform-notes/`.
 - **Size:** M.
 
 ### Task 6.4: Change log, manual controls and snapshot browser
-- [ ] **AC (gdrive AC7–AC10):**
+- [ ] **AC (gdrive AC7–AC10; ui AC10: Google Drive trigger, Drive trigger settings):**
   - Change log with outcomes, written in the event transaction; retention pruning.
   - Poll now, persisted pause and resume, rebuild snapshot (diff only).
   - Snapshot search with paging and total count; both names for crypt remotes.
   - API endpoints and UI for all of the above.
 - **V:** fake Drive API: pause across restart, rebuild diff, retention with an injected clock.
 - **Dep:** 6.2.
-- **Files:** `crates/gdrive/src/{changelog,controls}.rs`, `crates/api/src/gdrive.rs`, `crates/ui/src/gdrive.rs`.
+- **Files:** `crates/gdrive/src/{changelog,controls}.rs`, `crates/gdrive/src/api.rs`, `crates/ui/src/gdrive.rs`.
 - **Size:** M.
 
 ### Checkpoint: gdrive
@@ -523,12 +525,12 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** M.
 
 ### Task 7.3: Downloaders API and UI
-- [ ] **AC (downloaders AC1, AC4):**
+- [ ] **AC (downloaders AC1; ui AC10: Settings › Downloaders):**
   - `downloaders` resource: add, test, edit, remove.
   - Settings › Downloaders with a dialog per client.
 - **V:** Playwright plus axe.
 - **Dep:** 7.2, 0.9.
-- **Files:** `crates/api/src/downloaders.rs`, `crates/ui/src/pages/settings/downloaders.rs`.
+- **Files:** `crates/downloaders/src/api.rs`, `crates/ui/src/pages/settings/downloaders.rs`.
 - **Size:** S.
 
 ### Checkpoint: downloaders
@@ -593,7 +595,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **V:** fake `downloaders` owner: request raised and ended at the right times.
 - **Dep:** 8.4, 7.2.
 - **Files:** `crates/upload/src/pausing.rs`.
-- **Size:** XS.
+- **Size:** S.
 
 ### Task 8.6: Upload UI
 - [ ] **AC (ui AC10: Uploads, Destination, Settings › Uploads):** destinations with their dialog, queue with readiness reasons, live transfers with Hold and Stop, remote health, global upload settings.
@@ -629,13 +631,13 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** M.
 
 ### Task 9.2: Policy modes and the rclone limiter
-- [ ] **AC (throttle AC3–AC6, AC13–AC15):**
+- [ ] **AC (throttle AC3–AC6, AC13–AC15; upload AC21):**
   - Units and conversion; settling before a limit is raised; timed manual override, persisted.
   - Tiers, per stream, by bitrate (cap 200 Mbps plus media bitrate).
   - Limit applied within 5 s.
   - Optional "no new transfers above N streams".
 - **V:** table tests including the 10 Gbps outlier; integration test with `rcd`.
-- **Dep:** 9.1, 5.1.
+- **Dep:** 9.1, 5.1, 8.4.
 - **Files:** `crates/throttle/src/policy.rs`.
 - **Size:** S.
 
@@ -673,7 +675,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
   - A full check is a long job; a second one is refused.
   - 500k-item run within budget.
 - **V:** fixtures per server; capped performance test.
-- **Dep:** 3.1, 2.1.
+- **Dep:** 3.1, 2.2–2.4, 4.6, 0.7.
 - **Files:** `crates/parity/src/{fetch,compare,findings}.rs`.
 - **Size:** M.
 
@@ -730,7 +732,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
   - Opt-out and scope override per user; preferences removed 30 days after access is lost.
   - History of changes with retention.
 - **V:** fake Plex; `live` test on a test library.
-- **Dep:** 11.0, 11.1, 2.2.
+- **Dep:** 11.0, 11.1, 2.2, 0.7.
 - **Files:** `crates/track-preferences/src/{users,prefs,apply}.rs`.
 - **Size:** M.
 

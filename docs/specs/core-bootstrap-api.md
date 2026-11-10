@@ -19,7 +19,7 @@ Configure Autoplow once from Ansible and manage it afterwards through a complete
 
 ## Bootstrap file
 - **Location:**
-  - `<config dir>/bootstrap.yml`
+  - `<data directory>/bootstrap.yml`
   - or `--bootstrap <path>`
   - or the `AUTOPLOW_BOOTSTRAP` environment variable
 - **When it is read:** at startup, and only if it is present.
@@ -31,7 +31,7 @@ Configure Autoplow once from Ansible and manage it afterwards through a complete
 - **Cleanup:**
   - **After a fully successful ingest:** the file is deleted and `bootstrap-report.json` is written. The report has no secrets and lists created, skipped and failed resources with reasons.
   - **On partial failure:** the file is kept, the errors are reported in the report, the logs and the UI, and the next start retries.
-  - **If the file can't be deleted** (read-only mount): a loud warning appears in the logs and the UI.
+  - **If the file can't be deleted** (for example, no permission): a loud warning appears in the logs and the UI.
 - **Ansible:** Saltbox templates this file **only on initial install**. After that the user owns the configuration.
 
 ### Shape (sketch)
@@ -89,10 +89,18 @@ The detailed schema will be generated from the same Rust types the API uses, as 
 - **Identity:** every resource has a fixed internal ID and a unique, changeable name.
   - The API addresses a resource by name. A rename changes only the name: its queue, history and every reference follow it.
   - Addresses given to other systems (an Arr's webhook URL) use the ID, so a rename never breaks them.
-- **An Arr is one resource.** An `arrs` entry carries its connection and its trigger settings: token, minimum age, filters, path rules, managed webhook. `triggers` holds every other trigger. The UI lists both on the Triggers page. Deleting an Arr removes all of it, including its managed webhook.
+- **An Arr is one resource.** An `arrs` entry carries its connection and its trigger settings: token, minimum age, filters, path rules, managed connection. `triggers` holds every other trigger except Google Drive monitors, which live under `gdrive/monitors`. The UI lists all three on the Triggers page. Deleting an Arr removes all of it, including its managed webhook.
 - **Concurrent edits:** each resource carries a version (`ETag`). A change sent with an older version (`If-Match`) is refused with 412, and the UI says the item changed elsewhere and offers to reload it. A change sent without a version is applied.
 - **Deleting something in use** is refused with 409 and the list of what uses it (for example the triggers, anchors and destinations that name a target). Nothing is removed as a side effect. Work still queued for the item is dropped only when the delete is confirmed.
-- **`settings`** is a single resource: callback base URL, Autoplow's own browser address (for links in notifications), sign-in switch, trusted proxies, time zone, scan timing defaults, retention periods, backup schedule and log levels. Every key is typed and validated.
+- **`settings`** is a single resource with one group per area. Every key is typed and validated, and every value a Settings page or an options card shows is a key here:
+  - **general:** callback base URL, Autoplow's own browser address (for links in notifications), sign-in switch, trusted proxies, time zone, the update check switch, shared trigger credentials, the Arr reconcile interval, retention periods, backup schedule, log levels and log-file retention.
+  - **scan:** minimum age and maximum wait defaults, dead-letter attempts.
+  - **notifications:** the problem delay, delivery attempts, the grouping window.
+  - **rclone:** config path, which rclone, extra options and environment variables.
+  - **uploads:** the global transfer cap, upload windows, fixing file dates, retry attempts, cooldown times.
+  - **throttle:** what counts as a stream, the settling time, "no new uploads above N streams".
+  - **parity:** when to check, automatic fixes per server and finding type, the safety limit, match language, excluded pairs and finding types, retention.
+  - **track-preferences:** per Plex target whether it is on and for which libraries, the ignore label, the three trigger switches, the sweep time, the default scope.
 
 ## Routes
 | Route | For | Authentication |
@@ -104,9 +112,10 @@ The detailed schema will be generated from the same Rust types the API uses, as 
 | `/triggers/{sonarr,radarr,lidarr,manual}`, `/triggers/a-train/{drive}`, `/triggers/bazarr`, `/stats`, `/api/config-template` | callers written for autoscan, A-Train and Bazarr | the matching trigger's credentials |
 | `/health` | service checks | none; reveals only ok or not ok |
 | `/metrics` | Prometheus | a read-only API key |
+| `/setup` | first-start setup page | the setup token, unless opened on the host; gone once an admin exists |
 | everything else | the UI's own files | none |
 
-No route under `/triggers` or `/api/v1` ever depends on a browser sign-in, including when sign-in is switched off.
+No route under `/triggers` ever depends on a browser sign-in. A request under `/api/v1` carries a session or an API key; with sign-in switched off, the UI's session is given without a password (see the core spec).
 
 ## REST API
 - **Base:** `/api/v1`, designed OpenAPI-first. The OpenAPI document is served at `/api/v1/openapi.json`.
@@ -114,7 +123,7 @@ No route under `/triggers` or `/api/v1` ever depends on a browser sign-in, inclu
   - `Authorization: Bearer <api key>` (scoped: admin, read-only).
   - The UI uses session cookies plus CSRF protection.
 - **Resources:**
-  - `targets`, `arrs`, `triggers`, `destinations`, `downloaders`, `limiters`, `remotes` (read-only, from `rclone.conf`), `notifications`, `anchors`, `rewrite-sets`, `gdrive/accounts`, `gdrive/monitors`, `users`, `api-keys`, `settings`
+  - `targets`, `arrs`, `triggers`, `destinations`, `downloaders`, `limiters`, `remotes` (read-only, from `rclone.conf`), `notifications`, `anchors`, `rewrite-sets`, `gdrive/clients`, `gdrive/accounts`, `gdrive/monitors`, `api-keys`, `settings`
   - Each supports `GET` (list), `GET /{name}`, `PUT /{name}` (idempotent upsert) and `DELETE /{name}`.
   - `PATCH` uses JSON merge patch.
 - **Lists:**
@@ -129,24 +138,37 @@ No route under `/triggers` or `/api/v1` ever depends on a browser sign-in, inclu
   - `upsert` never deletes. Deletion is always explicit.
 - **Operations:**
   - `POST /scans` (manual scan, with a preview: `dry_run=true` returns the rewrite and library resolution for each target)
-  - `GET /queues/{target}`
-  - `POST /queues/{target}/{id}/retry`
-  - `GET /uploads`
-  - `POST /uploads/{id}/retry|cancel`
+  - `GET /queues/{target}`; `GET /queues/{target}/delivered` (history); `GET /scans/unmatched`
+  - `POST /queues/{target}/{id}/send` (send now); `POST /queues/{target}/{id}/retry`
+  - `GET /uploads` (filter by state: waiting, running, failed, finished)
+  - `POST /uploads/{id}/retry|stop`; `DELETE /uploads/{id}` (discard a failed file)
   - `DELETE /queues/{target}/dead-letters[/{id}]` (discard one or all)
   - `POST /uploads/hold` and `DELETE /uploads/hold`; `POST /uploads/stop` (stop all)
   - `POST /parity/runs`
-  - `GET /parity/findings`
-  - `POST /parity/findings/{id}/fix|skip|ignore`
-  - `POST /arrs/{name}/reconcile`
+  - `GET /parity/findings`; `GET /parity/findings/{id}` (both sides, history and what was done)
+  - `POST /parity/findings/{id}/fix|skip|ignore|unignore`
+  - `POST /arrs/{name}/reconcile|unmanage`; `POST /arrs/test` (a connection not saved yet) and `POST /arrs/{name}/test`
+  - `GET /arrs/{name}/mapping-suggestions`; `GET /arrs/{name}/webhooks` (older ones); `POST /arrs/{name}/webhooks/{id}/disable`; `DELETE /arrs/{name}/webhooks/{id}`
+  - `POST /targets/test` and `POST /targets/{name}/test`; `GET /targets/{name}/libraries`
+  - `POST /targets/plex-sign-in` (start) and `GET /targets/plex-sign-in/{id}` (result)
+  - `GET /browse/files?path=` (the filesystem browser); `GET /browse/targets/{name}?path=`; `GET /browse/gdrive/{account}?drive=&folder=`
   - `POST /backups` (take one now); `GET /backups`
+  - `POST /session` (sign in); `DELETE /session` (sign out); `PUT /session/password`; `POST /setup` (first start only)
+  - `POST /api-keys/{name}/regenerate`
+  - `GET /status` (version and the latest release, bootstrap result, every component, every connection, recent health events: what the Health and About pages show)
+  - `GET /stats` (the Dashboard tiles and the per-trigger and per-target counts)
   - `PUT /log-levels/{component}`
   - `POST /gdrive/monitors/{name}/poll|pause|resume|rebuild`; `GET /gdrive/monitors/{name}/changes|snapshot`
-  - `POST /notifications/undelivered/{id}/resend`; `DELETE /notifications/undelivered[/{id}]`
+  - `GET /notifications/undelivered`; `POST /notifications/undelivered/{id}/resend`; `DELETE /notifications/undelivered[/{id}]` (all, or with `?channel=` one channel's)
+  - `POST /notifications/{name}/test`
+  - `POST /gdrive/accounts/connect` (start) and `GET /gdrive/accounts/connect/{id}` (result); `GET /gdrive/accounts/{name}/drives`; `GET /gdrive/redirect-check`
+  - `GET /rclone` (state and version); `POST /rclone/reload`
   - `POST /downloaders/{name}/test`
-  - `GET /throttle` (sessions and each limiter's current limit)
-  - `GET /health`
-  - `GET /metrics` (Prometheus)
+  - `GET /throttle` (sessions and each limiter's current limit); `PUT /throttle/override` and `DELETE /throttle/override`
+  - `GET /track-preferences/users`; `PATCH /track-preferences/users/{id}` (opt out, scope override); `DELETE /track-preferences/users/{id}/preferences` (clear all)
+  - `GET /track-preferences/users/{id}/preferences`; `PUT` and `DELETE /track-preferences/users/{id}/preferences/{show}`
+  - `GET /track-preferences/excluded-shows`; `PUT` and `DELETE /track-preferences/excluded-shows/{show}`
+  - `GET /track-preferences/history`; `POST /track-preferences/sweeps` (a long job)
 - **Events:** `GET /api/v1/events` (SSE) for the UI's live updates. Each event has a type, a time, the resource it is about and a typed payload; the types are part of the OpenAPI document.
 - **Secrets in responses:** resource responses never contain a secret; the field is reported as `{"set": true}`. An admin can read one stored secret at a time through a separate admin-only endpoint (`GET /{kind}/{name}/secret`), which the UI uses for its show/hide toggle and Copy. Read-only keys get 403 there (see the core spec, "Secrets are visible to the admin").
 - **Errors:** RFC 9457 problem+json, with field-level validation errors.
