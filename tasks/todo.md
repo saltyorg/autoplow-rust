@@ -125,10 +125,11 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** S.
 
 ### Task 0.9: UI shell (Leptos)
-- [ ] **AC (core AC9, core-bootstrap-api AC4, AC5, ui AC1–AC9, AC11–AC18):**
+- [ ] **AC (core AC9, core-bootstrap-api AC4, AC5, ui AC1–AC9, AC11–AC18, AC19–AC24 for the shell's own pages):**
   - CSR app built with trunk and `wasm-opt -Oz`, embedded with rust-embed.
   - Login, the first-start setup page, navigation, live event client, API client from `api-types`.
   - Shared building blocks from the UI spec: colour tokens, accent with the contrast rule, density, sidebar, width caps, dialog with unsaved-changes handling, secret field with eye toggle.
+  - The form building blocks: the settings row, the nested row under a switch, the value field that carries its unit, the marked value with its explanation, and the table whose text column takes the spare width.
   - Shared behaviour from the UI spec: loading, empty and failed states; results shown where the action was; lists with More; live updates in place with the connection banner; an address per page, dialog and filter; return after sign-in; reduced motion.
 - **V:** Playwright login test and UI-rule checks (sizes, widths, dialog close paths); zero serious or critical axe violations; WASM within budget.
 - **Dep:** 0.6, 0.8.
@@ -158,7 +159,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 
 ### Checkpoint: core
 - [ ] Bootstrap seeds an admin user and an API key; `apply` is idempotent; the UI logs in.
-- [ ] Every later module's pages are added to `e2e/ui-rules.spec.ts` (ui AC4, AC5, AC9, AC11–AC16) as they land.
+- [ ] Every later module's pages are added to `e2e/ui-rules.spec.ts` (ui AC4, AC5, AC9, AC11–AC16, AC19–AC24) as they land.
 - [ ] All gates pass.
 - [ ] Human review.
 
@@ -178,7 +179,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** M.
 
 ### Task 1.2: Channels, subscriptions and UI
-- [ ] **AC (notifications AC4–AC6, AC11, AC12; ui AC10: Notifications, Channel):**
+- [ ] **AC (notifications AC4–AC6, AC11, AC12; ui AC10: Notifications, Channel, Settings › Notifications):**
   - Discord, Apprise and webhook channels.
   - Subscriptions per event type; one filter per channel; Test; fixed message format with a link.
   - Disable a channel without backfill on re-enable.
@@ -657,7 +658,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** S.
 
 ### Task 9.4: Throttle UI
-- [ ] **AC (ui AC10: Throttle, Limiter):** every limiter with its current limit and mode, and its dialog; sessions; options, including the per-client stream pause.
+- [ ] **AC (ui AC10: Throttle, Limiter, Settings › Throttle):** every limiter with its current limit and mode, and its dialog; each client's stream pause; sessions; the Settings › Throttle section.
 - **V:** Playwright plus axe.
 - **Dep:** 9.3, 0.9.
 - **Files:** `crates/ui/src/pages/throttle.rs`.
@@ -742,7 +743,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** M.
 
 ### Task 11.3: Track preferences UI
-- [ ] **AC (ui AC10: Track preferences, User):** users with their dialog, preferences (edit and clear), excluded shows, where it applies with ignored file patterns, the switch for changes made without playing, scope settings, Sweep with progress, and the history.
+- [ ] **AC (ui AC10: Track preferences, User):** users with their dialog, preferences (edit and clear), in the user's dialog; the Settings › Track preferences section (where it applies, what is left out with ignored file patterns, the switch for changes made without playing, scope); Sweep with progress, and the history.
 - **V:** Playwright plus axe.
 - **Dep:** 11.2, 0.9.
 - **Files:** `crates/ui/src/pages/tracks.rs`.

@@ -58,7 +58,7 @@ Module specs say *what* a page shows. This spec says *how* every page looks and 
   - List pages (Triggers, Targets, Notifications) and Settings cap their content at 1040 px, so a few columns don't spread across a wide screen.
   - Data-heavy pages (Dashboard, Health, Scans, Uploads, Throttle, Library parity, the Google Drive trigger) use the full width.
 - **Settings:**
-  - Sections, in order: General, Anchors, rclone, Uploads, Downloaders, Library parity, Google Drive, API keys, Appearance, About.
+  - Sections, in order: General, Anchors, rclone, Uploads, Downloaders, Throttle, Library parity, Track preferences, Notifications, Google Drive, API keys, Appearance, About.
   - The section menu has a fixed width of 200 px, and the section content sits beside it.
   - **Settings save as you change them.** Each card shows when it was last saved; there is no Save button. A change that needs confirming (a password) goes through a dialog, which keeps its own Save.
 - **Small screens:**
@@ -66,6 +66,7 @@ Module specs say *what* a page shows. This spec says *how* every page looks and 
   - Wide tables scroll inside their own container.
 
 ## Pages and dialogs
+- **Report pages hold data; settings live elsewhere** *(decided 2026-11-11)*. A page the admin visits to see what is happening (Dashboard, Health, Scans, Uploads, Throttle, Library parity, Track preferences, Notifications, the Google Drive trigger, the Triggers and Targets lists) shows tables and state. Options that are set once belong to a Settings section, or to the dialog of the item they belong to. A page whose module has a Settings section links to it from its header. A control that acts on what the page shows (a filter, Hold, Sweep, the throttle override) stays on the page.
 - **Full pages:** report and work screens.
   - Dashboard and Health.
   - Scans, Uploads, Throttle.
@@ -102,13 +103,13 @@ Every page and dialog in v1, the module that owns it, what it shows and does, an
 | Scan (dialog) | scan | A folder with a picker; a live preview per target of the rewritten path, the library and whether the folder exists; "send now". | 4.4 |
 | **Uploads** | upload | Speed, volume, readiness checks, rclone state. Running transfers with Stop; Hold and Stop all. Files not ready yet with the reason and when they become eligible. Failed files with Retry and Discard. Finished uploads on request. Upload now, for one destination or all. Destinations with remote health. | 8.6 |
 | Destination (dialog) | upload | Name, local folder and the path scans use for it, exclude patterns, ordered remotes or local folders with sub-path and per-remote cap, readiness rules with the scan wait, hardlink policy, move or copy, removing empty folders and from what depth, its own upload windows, the mount's propagation delay. | 8.6 |
-| **Throttle** | throttle | Active streams; a manual override with its time left; every limiter with direction, mode, limit now, limit with no streams, and state; sessions with what counts and which server counts are assumed; counting options: which kinds of playback count, the settling time, and no new uploads above a number of streams; per download client, pausing above a number of streams. | 9.4 |
+| **Throttle** | throttle | Active streams; a manual override with its time left; every limiter with direction, mode, limit now, limit with no streams, and state, and each client's pause on streams as a row beside that client's limiters; sessions with what counts and which server counts are assumed. A link to its settings. | 9.4 |
 | Limiter (dialog) | throttle | On or off, mode, and that mode's table or values. By-bitrate for rclone only. Says that Autoplow owns a client's limit. | 9.4 |
 | **Library parity** | parity | Findings table with type, title, server, Arr, what differs, suggested fix; filters including ignored and recently fixed; bulk fix, skip and ignore; Check, and the last check's result with any pairs it skipped and why. | 10.3 |
 | **Parity finding** | parity | Both sides compared, how the items were joined, exactly what the fix does, history; fix, skip, ignore; previous and next. | 10.3 |
-| **Track preferences** | track-preferences | Users with what is remembered and when it was last applied; one user's remembered choices with Edit and Clear; recent changes; where it applies (Plex targets, libraries, excluded shows, the ignore label, ignored file patterns); the switch for track changes made without playing; when to apply and the default scope; Sweep. | 11.3 |
-| User (dialog) | track-preferences | Included or opted out, scope override, Clear all. | 11.3 |
-| **Notifications** | notifications | Channels with state; which events go where; undelivered messages with Resend, Discard and Discard all per channel; delivery options (the problem delay, attempts, the grouping window). | 1.2 |
+| **Track preferences** | track-preferences | Users with whether they are included, how many shows are remembered and when preferences were last applied; recent changes; Sweep. A link to its settings. | 11.3 |
+| User (dialog) | track-preferences | Included or opted out; scope override; that user's remembered choices, searchable, with Edit and Clear per show; Clear all. | 11.3 |
+| **Notifications** | notifications | Channels with state; an overview of which events go to which channel (changed in each channel's dialog); undelivered messages with Resend, Discard and Discard all per channel. Events are named in plain sentences. | 1.2 |
 | Channel (dialog) | notifications | Enabled, name, URL, events grouped by category with All and None, one optional filter for the channel, Test; shows when the channel is failing and why. | 1.2 |
 | **Triggers** | scan | Every trigger with type, auth, minimum age, events today, last event, connection state. | 4.9 |
 | Trigger (dialog) | scan, arr | Name, authentication (its own or the shared credentials), minimum age, extra wait per event type and filters, whether the folder must exist (for same-system targets), targets never fed, path mappings inline. For an Arr: its URL and API key with Test, the certificate check and timeouts, a callback address of its own, Reconcile, Unmanage, the managed connection's state, and older webhooks with Disable and Delete. | 4.9 |
@@ -119,16 +120,43 @@ Every page and dialog in v1, the module that owns it, what it shows and does, an
 | **Targets** | targets, scan | Every target with server, libraries, path mappings, queued, state. | 4.9 |
 | Target (dialog) | targets, scan | Enabled, and whether scans wait or are dropped while it is off; whether it is on the same system as Autoplow or elsewhere, with its propagation delay; connection with Test, Sign in with Plex, the certificate check and timeouts; pacing, maximum wait and merging of many folders into their parent; filters; whether library-root scans are allowed, for a same-system target whether the folder must exist and for how long to wait, and the check after delivery; how streams are read (live or by polling); path mappings with picker and "try a path"; anchors, and for Plex empty trash and merged-item handling. | 4.9 |
 | Add target (dialog) | targets | Choose the server type; name, URL, token or Sign in with Plex; Test. | 4.9 |
-| **Settings › General** | core | Callback base URL and Autoplow's browser address; the update check switch; admin username, Change password (dialog), trusted proxies; shared trigger credentials; time zone; scan defaults (minimum age, maximum wait, dead-letter attempts); the Arr reconcile interval; how long things are kept; backups with Backup now; log levels per component; bootstrap status. | 0.10 |
+| **Settings › General** | core | Callback base URL and Autoplow's browser address; the update check switch; admin username, Change password (dialog), trusted proxies; shared trigger credentials; time zone; scan defaults (minimum age, maximum wait, dead-letter attempts); the Arr reconcile interval; how long things are kept; backups with how many to keep and Backup now; how much is logged, overall and per area, and how many log files to keep; bootstrap status. | 0.10 |
 | **Settings › Anchors** | scan | Anchor files with what they hold and their state; dialog with the file picker, the targets, and an optional folder it is limited to. | 4.6 |
 | **Settings › rclone** | rclone | Config path, with Reload and a note when a restart is pending; which rclone (the host's by default, or a given path); extra options and environment variables; version against the minimum; running state, or "not needed" when nothing uses it; remotes, read-only, with who uses them and their health. | 5.2 |
 | **Settings › Uploads** | upload | Global transfer cap, upload windows, fixing file dates, retry attempts, cooldown times, the stalled-transfer time. | 8.6 |
 | **Settings › Downloaders** | downloaders | Clients with what pauses and limits them and their state; dialog with Enabled, URL, credentials, Test, and pause conditions with the folder whose free space is watched. | 7.3 |
 | **Settings › Library parity** | parity | When to check; automatic fixes per server and finding type, with the safety limit; match language; what is compared, with finding types and pairs that can be switched off; how long resolved findings and the fix history are kept. | 10.3 |
+| **Settings › Throttle** | throttle | What counts as a stream (kinds of playback, streams on the local network, the highest bitrate believed for one stream); the wait before raising a limit; no new uploads above a number of streams. | 9.4 |
+| **Settings › Track preferences** | track-preferences | Where it applies (Plex targets, libraries); what is left out (the ignore label, file patterns, shows); when to apply, with the switch for changes made without playing and the sweep time; the default scope. | 11.3 |
+| **Settings › Notifications** | notifications | Delivery options: the problem delay, attempts, the grouping window. | 1.2 |
 | **Settings › Google Drive** | gdrive | Redirect URI with its reachability check; OAuth clients and accounts, each with a dialog; setup guide. | 6.1 |
 | **Settings › API keys** | core | Keys with access level and Copy; dialog to rename, change access, show, regenerate, revoke; what each access level (admin, read-only, metrics) can do. | 0.10 |
 | **Settings › Appearance** | core | Accent with the contrast check and a preview; density. | 0.10 |
 | **Settings › About** | core | Versions, with a newer release when one exists; licence, source, API document. | 0.10 |
+
+## Words
+*(Decided 2026-11-11.)*
+- **Plain sentences, never internal names.** Everything the admin reads is written for them: an event is "A media server stops answering", not its identifier; a state is a word or a phrase. Identifiers used by the API (event types, field names, codes) appear only in the API and its documentation.
+- Paths, remote names, and names the admin chose themselves are shown as they are.
+
+## Settings and forms
+*(Decided 2026-11-11.)* Every settings card and every dialog section follows one of two layouts, and does not mix them.
+- **A row:** what the setting is on the left, its control on the right. Used for a short value, a choice or a switch. Rows in a group are separated by a thin line.
+- **A field with its label above it,** spanning the width: used for long text (a URL, a path, a name, a list of patterns).
+- **Nothing follows a control.** No unit, hint or explanation sits to the right of a field, a choice or a tick box.
+- **Explanations go under the label,** on their own line, in the muted colour, and only where one is needed.
+- **A unit is part of the value:** `30 s`, `15 m`, `200 Mbps`. The field accepts the number alone and adds the unit.
+- **One control per row.**
+  - A detail that only matters while a switch is on is a **nested row** directly under the switch, indented, and shown only while the switch is on.
+  - A number for which "off" means "no number" is a single field; leaving it empty switches it off, and the explanation says so.
+  - Several tick boxes that are one choice of many (kinds of playback) share a row.
+- **What can be changed looks like a field.** A value the admin can edit is never drawn as plain text; a list whose rows are edited in place (the remotes of a destination) is a table of fields with Add and Remove.
+
+## Tables
+*(Decided 2026-11-11.)*
+- **The text column gets the room.** In a data table the column that holds a title, a path or a name takes the spare width; the other columns are as wide as their content.
+- **A value that needs explaining explains itself.** It is marked with a symbol and the warning colour and underlined with dots, and the explanation appears on hover and on keyboard focus, and is part of the value's accessible name. The explanation is not written out in the cell. This does not apply to a column whose purpose is the explanation (a wait reason, a state, an error).
+- A tick box in a table is not followed by words that repeat what it shows.
 
 ## Controls
 - **Rows:**
@@ -198,3 +226,9 @@ Every page and dialog in v1, the module that owns it, what it shows and does, an
 16. A setting that fails to save shows the reason on its card and never shows Saved; a field with an invalid value says why at the field.
 17. After the session ends, the sign-in page returns the admin to the address they were on.
 18. With reduced motion requested by the system, nothing animates beyond a fade.
+19. No page or dialog shows an event type, field name or other API identifier as text (a scan of every page's visible text against the catalogue and the API's field names).
+20. No field, choice or tick box is followed on its line by a unit, hint or explanation; explanations sit under their label; and no row holds both a field and a tick box (Playwright checks every settings card and dialog section).
+21. A detail that depends on a switch is hidden while the switch is off and appears as a nested row when it is on; a number that can be left empty to switch a rule off says so under its label.
+22. Report pages contain no set-once options; each links to its Settings section, and every setting in a module's `settings` group appears in that section or in an item's dialog.
+23. In every data table the text column takes the spare width, and a marked value shows its explanation on hover and on keyboard focus and carries it in its accessible name.
+24. Every value the admin can change is a field, a choice or a tick box.
