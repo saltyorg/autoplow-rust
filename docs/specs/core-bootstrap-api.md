@@ -60,13 +60,18 @@ destinations:
   - name: media
     local_path: /mnt/local/Media/
     remotes: [{ remote: "google:", path: /Media/ }]
+downloaders:
+  - name: sabnzbd
+    type: sabnzbd
+    url: http://sabnzbd:8080
+    api_key: "..."
 notifications:
   - name: discord-alerts
     type: discord
     url: "..."
-    events: [target.unavailable, remote.quota, matcharr.merged.manual]
+    events: [target.unavailable, remote.quota, parity.merged.manual]
 ```
-The detailed schema will be generated from the same Go types the API uses, as a single source of truth, and published as a JSON Schema.
+The detailed schema will be generated from the same Rust types the API uses, as a single source of truth, and published as a JSON Schema.
 
 ## REST API
 - **Base:** `/api/v1`, designed OpenAPI-first. The OpenAPI document is served at `/api/v1/openapi.json`.
@@ -74,7 +79,7 @@ The detailed schema will be generated from the same Go types the API uses, as a 
   - `Authorization: Bearer <api key>` (scoped: admin, read-only).
   - The UI uses session cookies plus CSRF protection.
 - **Resources:**
-  - `targets`, `arrs`, `triggers`, `destinations`, `downloaders`, `remotes` (read-only, from `rclone.conf`), `notifications`, `anchors`, `rewrite-sets`, `gdrive/accounts`, `gdrive/monitors`, `users`, `api-keys`, `settings`
+  - `targets`, `arrs`, `triggers`, `destinations`, `downloaders`, `limiters`, `remotes` (read-only, from `rclone.conf`), `notifications`, `anchors`, `rewrite-sets`, `gdrive/accounts`, `gdrive/monitors`, `users`, `api-keys`, `settings`
   - Each supports `GET` (list), `GET /{name}`, `PUT /{name}` (idempotent upsert) and `DELETE /{name}`.
   - `PATCH` uses JSON merge patch.
 - **Apply:** `POST /api/v1/apply?mode=seed|upsert&dry_run=true|false`, with the bootstrap schema as the body.
@@ -86,23 +91,29 @@ The detailed schema will be generated from the same Go types the API uses, as a 
   - `POST /queues/{target}/{id}/retry`
   - `GET /uploads`
   - `POST /uploads/{id}/retry|cancel`
-  - `POST /matcharr/runs`
-  - `GET /matcharr/findings`
-  - `POST /matcharr/findings/{id}/fix|skip|ignore`
+  - `DELETE /queues/{target}/dead-letters[/{id}]` (discard one or all)
+  - `POST /uploads/hold` and `DELETE /uploads/hold`; `POST /uploads/stop` (stop all)
+  - `POST /parity/runs`
+  - `GET /parity/findings`
+  - `POST /parity/findings/{id}/fix|skip|ignore`
   - `POST /arrs/{name}/reconcile`
+  - `POST /gdrive/monitors/{name}/poll|pause|resume|rebuild`; `GET /gdrive/monitors/{name}/changes|snapshot`
+  - `POST /notifications/undelivered/{id}/resend`; `DELETE /notifications/undelivered[/{id}]`
+  - `POST /downloaders/{name}/test`
+  - `GET /throttle` (sessions and each limiter's current limit)
   - `GET /health`
   - `GET /metrics` (Prometheus)
 - **Events:** `GET /api/v1/events` (SSE) for the UI's live updates.
-- **Secrets in responses:** never returned. They are write-only fields, reported as `{"set": true}`.
+- **Secrets in responses:** resource responses never contain a secret; the field is reported as `{"set": true}`. An admin can read one stored secret at a time through a separate admin-only endpoint (`GET /{kind}/{name}/secret`), which the UI uses for its show/hide toggle and Copy. Read-only keys get 403 there (see the core spec, "Secrets are visible to the admin").
 - **Errors:** RFC 9457 problem+json, with field-level validation errors.
 
 ## Acceptance criteria
 1. A bootstrap file creates only missing resources; existing ones are never modified; a fully successful run deletes the file and writes a secret-free report; a partial failure keeps the file.
 2. `PUT /api/v1/<kind>/{name}` twice with the same body yields `unchanged` the second time; `POST /apply?dry_run=true` performs no writes.
-3. Secrets are never returned by any endpoint (`{"set": true}` only).
+3. No list or resource response contains a secret (`{"set": true}` only). The admin-only secret endpoint returns one secret, and a read-only key gets 403 from it.
 4. Every UI page is built solely on public API endpoints.
 
 ## Boundaries
 - **Always:** follow `CONSTRAINTS.md`; validate external input at the boundary.
 - **Ask first:** Breaking API changes.
-- **Never:** Return secrets; Accept unknown config keys silently.
+- **Never:** Return a secret in a list or resource response, or to a read-only key; Accept unknown config keys silently.

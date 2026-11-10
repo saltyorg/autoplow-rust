@@ -33,7 +33,7 @@ Provide the foundation every module builds on. A component can be restarted when
   - UI sessions with CSRF protection and a login rate limit.
   - Encrypted secret storage, with key rotation that re-encrypts everything. This covers API keys, trigger tokens, target tokens, Arr API keys, notification URLs and Google OAuth client secrets and tokens; only the admin password is hashed.
   - **Secrets are visible to the admin** *(decided 2026-10-30)*. Anyone who can see them already has admin access. Read-only API keys can't read any secret.
-    - Every stored secret (API keys, trigger tokens, Arr API keys, target tokens, notification URLs, the OAuth client secret) is masked in its dialog, with a **Reveal** button so the admin can check it is the right one.
+    - Every stored secret (API keys, trigger tokens, Arr API keys, target tokens, notification URLs, the OAuth client secret) is masked in its dialog, with a show/hide toggle inside the field so the admin can check it is the right one (see the [UI rules](ui.md)).
     - Lists don't show secrets; the API keys list has a **Copy** button per key.
 - **Observability:**
   - `tracing` logs with a level per component, with secrets redacted by type.

@@ -11,7 +11,7 @@ Turn Google Drive changes (My Drive and shared drives) into scan events for the 
 
 ## Connecting
 1. The user creates a Google Cloud OAuth client of type **Web application**. The UI includes a step-by-step guide with screenshots.
-2. They enter its client ID and secret in our UI. Each set is stored once as an encrypted "Google account" credential and can be reused.
+2. They enter its client ID and secret in our UI. Each set is stored once as an **OAuth client**, with the secret encrypted, and can be reused for several Google accounts.
 3. They click **Connect**:
    - The browser goes through Google consent, requesting `drive.readonly` and offline access.
    - Google redirects to `https://<our-ui>/api/v1/gdrive/oauth/callback` with a state parameter.

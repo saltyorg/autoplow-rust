@@ -30,13 +30,13 @@ Notes on the health events *(added 2026-10-30)*:
 - `component.failing`: a background component restarted 3 times within 10 minutes (the default) and is still restarting with backoff. Single restarts are only logged.
 
 ## Routing
-- Each notification target has a list of subscribed event types, so different event types can go to different targets.
+- Each channel has a list of subscribed event types, so different event types can go to different channels.
 - An optional filter per subscription narrows events by trigger, target or remote *(decided 2026-10-27)*.
 
 ## Delivery
 - **Queue:**
   - Each event is written to a durable `notification_outbox` table in the same transaction as the state change that caused it.
-  - The dispatcher aggregates events per (notification target, event type) over a window (default 10s) into one message.
+  - The dispatcher aggregates events per (channel, event type) over a window (default 10s) into one message.
 - **Retries:** exponential backoff that honours `Retry-After`. After N attempts the message is dead-lettered, and that is visible in the UI.
 - **Undelivered messages** *(added 2026-10-30)*:
   - The UI offers **Send again** and **Discard** for each one, and **Discard all** per channel.
@@ -48,7 +48,7 @@ Notes on the health events *(added 2026-10-30)*:
 1. An event recorded in the same transaction as its state change is delivered after a restart even if the process crashed before sending.
 2. Events of the same type for the same target within the aggregation window produce one message.
 3. Discord rate limits and `Retry-After` are honoured; after N failed attempts the message is dead-lettered and visible in the UI.
-4. Subscriptions filter by event type per notification target; unsubscribed types are never sent.
+4. Subscriptions filter by event type per channel; unsubscribed types are never sent.
 5. An undelivered message can be sent again or discarded, one at a time or all for a channel; undelivered messages older than the pruning period are removed automatically.
 6. A disabled channel gets no new messages queued while it is off, and nothing is backfilled when it is switched back on.
 

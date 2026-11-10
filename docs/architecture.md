@@ -26,14 +26,14 @@ These come directly from the failures we saw in earlier projects.
   ├─ legacy autoscan/A-Train endpoints    │   PathEvent
   ├─ manual/API                           ├──▶ Router ──┬──▶ Scan pipeline ──▶ Targets (Plex/Emby/Jellyfin/Tofa/Tdarr/autoplow)
   ├─ local FS (inotify | walk | both)     │             ├──▶ Upload pipeline ─▶ rclone transport (supervised rclone rcd, unix socket)
-  └─ Google Drive (OAuth, Changes API)    ┘             └──▶ matcharr hints (optional, per item)
+  └─ Google Drive (OAuth, Changes API)    ┘             └──▶ parity hints (optional, per item) 
 
  Session sources (Plex/Emby/Jellyfin websockets, Tofa polling) ─▶ Session registry ─▶ Throttle controller ─┬▶ core/bwlimit (rclone)
                                                                                                            └▶ Downloaders (speed limits)
  Upload pipeline ─▶ Downloaders (pause) ─▶ SABnzbd / NZBGet / qBittorrent
  Plex notifications ─▶ PAL (one queue per show/user) ─▶ Plex parts API
  Arr connection reconciler ─▶ Arr APIs (keeps our webhook correct)
- Schedulers: matcharr sweeps, library-cache refresh, retention cleanup
+ Schedulers: parity sweeps, library-cache refresh, retention cleanup
  Observability: tracing logs, Prometheus /metrics, SSE event stream for the UI
 ```
 

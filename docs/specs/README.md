@@ -19,7 +19,7 @@
 | `downloaders` | [downloaders.md](downloaders.md) | SABnzbd, NZBGet and qBittorrent clients; single owner of pause state and speed limits | `core`, `notifications` |
 | `upload` | [upload.md](upload.md) | Destinations, per-file queue, readiness, failover, schedules, when to pause download clients | `core`, `rclone`, `scan`, `notifications`, `downloaders` |
 | `throttle` | [throttle.md](throttle.md) | Session registry; limits for rclone and download clients from stream activity | `targets`, `rclone`, `downloaders` |
-| `parity` | [parity.md](parity.md) | Library parity engine, fixes, review | `core`, `targets`, `arr`, `notifications` |
+| `parity` | [parity.md](parity.md) | Library parity engine, fixes, review | `core`, `targets`, `arr`, `scan`, `notifications` |
 | `track-preferences` | [track-preferences.md](track-preferences.md) | Plex track preferences | `core`, `targets` |
 
 **Build order:** `core` → `notifications`, `targets` → `arr` → `scan` → `rclone` → `gdrive` → `downloaders` → `upload` → `throttle` → `parity` → `track-preferences`.

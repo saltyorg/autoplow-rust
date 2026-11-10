@@ -1,6 +1,6 @@
 # Spec: Library parity (v1)
 
-**Module:** `parity` · **Depends on:** core, targets, arr, notifications · **Decisions:** ADR-0014 · **Status:** approved 2026-10-27
+**Module:** `parity` · **Depends on:** core, targets, arr, scan, notifications · **Decisions:** ADR-0014 · **Status:** approved 2026-10-27
 
 ## Objective
 Show and (optionally) fix where media servers disagree with the Arrs: wrong matches, items missing on either side, file differences, merged items — review-first, never modifying what it does not understand.

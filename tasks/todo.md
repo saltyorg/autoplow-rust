@@ -114,7 +114,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** S.
 
 ### Task 0.9: UI shell (Leptos)
-- [ ] **AC (core AC9, core-bootstrap-api AC4, ui AC1–AC3, AC6–AC8):**
+- [ ] **AC (core AC9, core-bootstrap-api AC4, ui AC1–AC9):**
   - CSR app built with trunk and `wasm-opt -Oz`, embedded with rust-embed.
   - Login, navigation, live event client, API client from `api-types`.
   - Shared building blocks from the UI spec: colour tokens, accent with the contrast rule, density, sidebar, width caps, dialog with unsaved-changes handling, secret field with eye toggle.
@@ -125,7 +125,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 
 ### Checkpoint: core
 - [ ] Bootstrap seeds an admin user and an API key; `apply` is idempotent; the UI logs in.
-- [ ] Every later module's pages are added to `e2e/ui-rules.spec.ts` (ui AC4, AC5) as they land.
+- [ ] Every later module's pages are added to `e2e/ui-rules.spec.ts` (ui AC4, AC5, AC9) as they land.
 - [ ] All gates pass.
 - [ ] Human review.
 
@@ -289,8 +289,8 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** M.
 
 ### Task 4.4: Arr trigger wiring, manual scan API with preview, queue UI
-- [ ] **AC (scan AC1, AC5):**
-  - Arr events produce folder scans.
+- [ ] **AC (scan AC1, AC5, AC8):**
+  - Arr events produce folder scans, resolved to libraries by path components.
   - `POST /scans` with `dry_run` preview (rewrite, library, existence).
   - Queue pages with wait reasons.
 - **V:** API tests; Playwright plus axe.
@@ -506,8 +506,9 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** M.
 
 ### Task 8.4: Concurrency, failover, schedules
-- [ ] **AC (upload AC7, AC8):**
+- [ ] **AC (upload AC7, AC8, AC12, AC13):**
   - Global cap plus per-remote caps.
+  - Hold new uploads (persisted) and stop one or all transfers.
   - Remote-health cooldown.
   - Schedule windows that let transfers in flight finish.
 - **V:** fake-transport tests.

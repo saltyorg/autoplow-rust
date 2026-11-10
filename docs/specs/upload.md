@@ -16,7 +16,7 @@ This consolidates the upload decisions in the ADRs in [../decisions/](../decisio
 ## Model
 - **Unit of work:** uploads are **per file**. A file enters the upload queue from the local filesystem triggers (inotify, walk, or both) or from Arr import events.
 - **Destinations:** a destination maps a local path to an ordered list of remotes taken from the user's `rclone.conf`. Each remote can have a sub-path.
-- **Transport:** in-process rclone (librclone RPC). Each batch is its own job with its own stats group. Uploads are tracked by job and identity, never by file name.
+- **Transport:** the supervised `rclone rcd` child, through the `rclone` module (ADR-0003). Each batch is its own job with its own stats group. Uploads are tracked by job and identity, never by file name.
 
 ## Readiness (all configurable per destination)
 1. **Minimum age**

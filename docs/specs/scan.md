@@ -85,7 +85,6 @@ Common to all triggers:
 ## Open items
 - ~~The webhook mechanics for Bazarr and Whisparr~~ (resolved, see ../research/arr-connect-api.md).
 - How to discover Tofa's library root paths.
-- Default values for minimum age and maximum wait.
 - ~~Evaluate autopulse's scan approach~~: done. Approach A stays the only mode (see [ADR-0009](../decisions/0009-folder-level-scans-only.md)).
 
 ## Acceptance criteria
