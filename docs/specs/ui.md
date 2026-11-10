@@ -103,7 +103,7 @@ Every page and dialog in v1, the module that owns it, what it shows and does, an
 | **Track preferences** | track-preferences | Users with what is remembered and when it was last applied; one user's remembered choices with Clear; when to apply and the default scope; Sweep. | 11.3 |
 | User (dialog) | track-preferences | Included or opted out, scope override, Clear all. | 11.3 |
 | **Notifications** | notifications | Channels with state; which events go where; undelivered messages with Resend, Discard and Discard all per channel. | 1.2 |
-| Channel (dialog) | notifications | Enabled, name, URL, events grouped by category with All and None, optional filter, Test. | 1.2 |
+| Channel (dialog) | notifications | Enabled, name, URL, events grouped by category with All and None, one optional filter for the channel, Test; shows when the channel is failing and why. | 1.2 |
 | **Triggers** | scan | Every trigger with type, auth, minimum age, events today, last event, connection state. | 4.9 |
 | Trigger (dialog) | scan, arr | Name, authentication, minimum age and filters, targets never fed, path rules inline. For an Arr: its URL and API key with Test, the managed webhook's state, and older webhooks with Disable and Delete. | 4.9, 3.3, 3.4 |
 | Add trigger (dialog) | scan | Choose Arr, webhook, local folders or Google Drive, then that type's fields. | 4.9 |
@@ -113,7 +113,7 @@ Every page and dialog in v1, the module that owns it, what it shows and does, an
 | **Targets** | targets, scan | Every target with server, libraries, path rules, queued, state. | 4.9 |
 | Target (dialog) | targets, scan | Connection with Test; path mappings with picker and "try a path"; anchors, and for Plex empty trash and merged-item handling. | 4.9 |
 | Add target (dialog) | targets | Choose the server type; name, URL, token; Test. | 4.9 |
-| **Settings › General** | core | Callback base URL; admin username, Change password (dialog), the sign-in switch with its warning, trusted proxies; time zone; scan timing defaults; how long things are kept; backups with Backup now; log levels per component; bootstrap status. | 0.10 |
+| **Settings › General** | core | Callback base URL and Autoplow's browser address; admin username, Change password (dialog), the sign-in switch with its warning, trusted proxies; time zone; scan timing defaults; how long things are kept; backups with Backup now; log levels per component; bootstrap status. | 0.10 |
 | **Settings › Anchors** | scan | Anchor files with what they hold and their state; dialog with the file picker and targets. | 4.6 |
 | **Settings › rclone** | rclone | Config path; which rclone (the host's by default, or a given path); version against the minimum; running state, or "not needed" when nothing uses it; remotes, read-only, with who uses them and their health. | 5.2 |
 | **Settings › Uploads** | upload | Global transfer cap, upload windows, fixing file dates. | 8.6 |

@@ -33,7 +33,7 @@ Provide the foundation every module builds on. A component can be restarted when
   - Compare-and-set helpers.
   - **Upgrades:** a consistent copy of the database is taken before migrations run. If a migration fails, Autoplow stops and says how to put the copy back.
   - **Downgrades:** a database from a newer Autoplow is refused at start, with a clear message. Nothing is changed.
-  - **Backups** *(decided 2026-11-10)*: a consistent copy daily, keeping the last 7 (both configurable), plus on demand from the UI and API. Copies live in the data directory. Restoring is replacing the database file while Autoplow is stopped; the documentation gives the steps.
+  - **Backups** *(decided 2026-11-10)*: a failed backup raises `backup.failed`. A consistent copy daily, keeping the last 7 (both configurable), plus on demand from the UI and API. Copies live in the data directory. Restoring is replacing the database file while Autoplow is stopped; the documentation gives the steps.
   - **When the database can't be written** (disk full, read-only): incoming triggers are refused with 503 and `Retry-After`, never accepted and lost. The Health page shows the cause, and work resumes on its own when writing succeeds again.
 - **Paths:**
   - `FolderPath`, compared by components.

@@ -92,7 +92,7 @@ The detailed schema will be generated from the same Rust types the API uses, as 
 - **An Arr is one resource.** An `arrs` entry carries its connection and its trigger settings: token, minimum age, filters, path rules, managed webhook. `triggers` holds every other trigger. The UI lists both on the Triggers page. Deleting an Arr removes all of it, including its managed webhook.
 - **Concurrent edits:** each resource carries a version (`ETag`). A change sent with an older version (`If-Match`) is refused with 412, and the UI says the item changed elsewhere and offers to reload it. A change sent without a version is applied.
 - **Deleting something in use** is refused with 409 and the list of what uses it (for example the triggers, anchors and destinations that name a target). Nothing is removed as a side effect. Work still queued for the item is dropped only when the delete is confirmed.
-- **`settings`** is a single resource: callback base URL, sign-in switch, trusted proxies, time zone, scan timing defaults, retention periods, backup schedule and log levels. Every key is typed and validated.
+- **`settings`** is a single resource: callback base URL, Autoplow's own browser address (for links in notifications), sign-in switch, trusted proxies, time zone, scan timing defaults, retention periods, backup schedule and log levels. Every key is typed and validated.
 
 ## Routes
 | Route | For | Authentication |

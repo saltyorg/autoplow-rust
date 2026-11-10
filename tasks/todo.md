@@ -153,20 +153,22 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 ## Phase 1: `notifications`
 
 ### Task 1.1: Outbox and dispatcher
-- [ ] **AC (notifications AC1–AC3):**
+- [ ] **AC (notifications AC1–AC3, AC7–AC10):**
   - Transactional outbox.
-  - Aggregation window.
-  - Backoff honouring `Retry-After` and Discord limits.
-  - Dead-letter.
+  - Aggregation window, and storm summaries above 20 waiting messages.
+  - Problems notify only after lasting 2 minutes; recovery only if the problem was sent; flapping reported once.
+  - Backoff from 30 s to 30 minutes honouring `Retry-After` and Discord limits; permanent failures dead-letter at once.
+  - Per-source ordering.
+  - Dead-letter after 8 attempts.
 - **V:** crash-and-restart durability test with a paused clock.
 - **Dep:** 0.3, 0.4.
 - **Files:** `crates/notifications/src/{outbox,dispatch}.rs`.
 - **Size:** M.
 
 ### Task 1.2: Channels, subscriptions and UI
-- [ ] **AC (notifications AC4–AC6):**
+- [ ] **AC (notifications AC4–AC6, AC11, AC12):**
   - Discord, Apprise and webhook channels.
-  - Subscriptions per event type.
+  - Subscriptions per event type; one filter per channel; Test; fixed message format with a link.
   - Disable a channel without backfill on re-enable.
   - Undelivered: send again, discard, discard all; 30-day pruning.
   - UI page.
