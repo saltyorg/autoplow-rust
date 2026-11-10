@@ -64,6 +64,11 @@ Provide the foundation every module builds on. A component can be restarted when
   - Certificate checking on by default, with a per-connection switch.
   - Errors classified as retry later, back off the whole connection, or fail this one item.
   - Tokens never appear in logs, including in request URLs.
+- **Update check** *(decided 2026-11-10)*:
+  - Once a day Autoplow asks GitHub for the latest release of its own repository, and shows a newer one on Settings › About and the Health page.
+  - It sends nothing about the install, raises no notification, and never updates itself; Saltbox does that.
+  - A switch under Settings › General turns the check off. A failed check is not a health problem.
+- **Versions:** releases follow SemVer over the API, the bootstrap file and database upgrades. Going back to an older version is not supported (see the upgrade copy above).
 - **Observability:**
   - `tracing` logs with a level per component, with secrets redacted by type.
   - **Where logs go** *(decided 2026-11-10)*: standard output, for the journal, and a log file. Autoplow rotates the file daily or at 50 MB and keeps the last 7 (configurable). Levels can be changed per component while running. There is no log viewer in the UI in v1.
@@ -100,6 +105,7 @@ Provide the foundation every module builds on. A component can be restarted when
 18. The log file rotates by age and size and keeps only the configured number; a component's log level changed through the API applies without a restart.
 19. A feature whose required capability is missing reports itself as off, with the reason, on the Health page, and the rest of Autoplow runs normally.
 20. The outbound client enforces its timeouts and size cap, honours `Retry-After`, refuses a self-signed certificate unless that connection's check is switched off, and never logs a token.
+21. With the update check on, a newer release is shown on About and Health within a day and no notification is raised; with it off, no request is made. The request carries nothing that identifies the install.
 
 ## Boundaries
 - **Always:** follow `CONSTRAINTS.md`; keep wall-clock time behind the `Clock` trait.

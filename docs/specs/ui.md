@@ -4,6 +4,12 @@
 
 Module specs say *what* a page shows. This spec says *how* every page looks and behaves, so pages built by different modules feel like one app. The reference mockups are kept outside the repository; where they and this spec disagree, this spec wins.
 
+## Non-goals
+- A light theme
+- Translations; the UI is in English
+- Keyboard shortcuts beyond what the controls themselves give
+- A search across the whole app
+
 ## Principles
 1. **Inline before separate.** When a control can live inside or on the thing it acts on, put it there instead of adding a separate button. For example, the show/hide toggle for a secret is an eye icon inside the field. This is not a limit on buttons in general: an action the admin needs gets its button.
 2. **Dense, not cramped.** Admins scan a lot of rows, so tables are compact and nothing is padded for decoration. Every interactive control still has a target of at least 44 × 44 px.
@@ -113,7 +119,7 @@ Every page and dialog in v1, the module that owns it, what it shows and does, an
 | **Targets** | targets, scan | Every target with server, libraries, path rules, queued, state. | 4.9 |
 | Target (dialog) | targets, scan | Enabled, and whether scans wait or are dropped while it is off; connection with Test, Sign in with Plex, and the certificate check; pacing and merging of many folders into their parent; path mappings with picker and "try a path"; anchors, and for Plex empty trash and merged-item handling. | 4.9 |
 | Add target (dialog) | targets | Choose the server type; name, URL, token or Sign in with Plex; Test. | 4.9 |
-| **Settings › General** | core | Callback base URL and Autoplow's browser address; admin username, Change password (dialog), the sign-in switch with its warning, trusted proxies; time zone; scan timing defaults; how long things are kept; backups with Backup now; log levels per component; bootstrap status. | 0.10 |
+| **Settings › General** | core | Callback base URL and Autoplow's browser address; the update check switch; admin username, Change password (dialog), the sign-in switch with its warning, trusted proxies; time zone; scan timing defaults; how long things are kept; backups with Backup now; log levels per component; bootstrap status. | 0.10 |
 | **Settings › Anchors** | scan | Anchor files with what they hold and their state; dialog with the file picker, the targets, and an optional folder it is limited to. | 4.6 |
 | **Settings › rclone** | rclone | Config path, with Reload and a note when a restart is pending; which rclone (the host's by default, or a given path); extra options and environment variables; version against the minimum; running state, or "not needed" when nothing uses it; remotes, read-only, with who uses them and their health. | 5.2 |
 | **Settings › Uploads** | upload | Global transfer cap, upload windows, fixing file dates. | 8.6 |
@@ -122,7 +128,7 @@ Every page and dialog in v1, the module that owns it, what it shows and does, an
 | **Settings › Google Drive** | gdrive | Redirect URI with its reachability check; OAuth clients and accounts, each with a dialog; setup guide. | 6.1 |
 | **Settings › API keys** | core | Keys with access level and Copy; dialog to rename, change access, show, regenerate, revoke; what each access level can do. | 0.10 |
 | **Settings › Appearance** | core | Accent with the contrast check and a preview; density. | 0.10 |
-| **Settings › About** | core | Versions, licence, source, API document. | 0.10 |
+| **Settings › About** | core | Versions, with a newer release when one exists; licence, source, API document. | 0.10 |
 
 ## Controls
 - **Rows:**
@@ -144,6 +150,28 @@ Every page and dialog in v1, the module that owns it, what it shows and does, an
   - Copy appears only where the value is meant to be pasted elsewhere: an API key, the OAuth redirect URI.
 - **Identifiers** (client IDs, IDs, paths) are never shortened in a way that hides what the admin needs to compare.
 
+## Behaviour
+- **Loading, empty and failed:**
+  - While a page loads, its sections show placeholders in their final shape.
+  - An empty list says what belongs there and how to add it.
+  - A load that fails shows the reason in words, with Retry. A page never shows a blank area.
+- **Results of actions** *(decided 2026-11-10)*:
+  - The row, card or dialog an action was started from shows its result and any error, in words, next to the control.
+  - When the row itself is removed (a delete, a discard), a status line at the top of its section says what happened.
+  - There are no pop-up messages elsewhere on the screen.
+- **Long lists** *(decided 2026-11-10)*: the first 100 rows, then a More button that adds the next 100. Filters and position are kept, and the number shown is stated.
+- **Live updates:**
+  - Values change in place. Rows are not reordered, and the row under the pointer or the keyboard focus does not move.
+  - New rows that would push others down are announced by a "New" line at the top of the list, which adds them when pressed.
+  - **Connection lost:** a banner says live updates have stopped. When they return, the page reloads its data and the banner goes.
+- **Addresses:** every page, open dialog and filter has its own address. Reloading returns to the same view, Back closes a dialog, and links in notifications open the item they name.
+- **Session ended:** the sign-in page appears and then returns the admin to where they were.
+- **Settings that fail to save:** the card says why and does not show Saved. A setting changed elsewhere since the page loaded offers Reload.
+- **Form errors:** shown at the field, in words, when the field is left and on Save.
+- **Times:** in Autoplow's time zone, 24-hour. Times in the last day are relative ("3 min ago"), with the exact time on hover and focus.
+- **Motion:** when the system asks for reduced motion, nothing animates beyond a fade.
+- **Browsers:** the two latest versions of Chrome, Firefox and Safari.
+
 ## Accessibility
 - WCAG 2.1 AA.
 - Every page passes axe with zero serious or critical violations (core AC9).
@@ -157,8 +185,16 @@ Every page and dialog in v1, the module that owns it, what it shows and does, an
 3. In every dialog, Save is disabled until an edit, and Close, Cancel, Esc and a click outside with unsaved edits all show the discard confirmation.
 4. No dialog opens another dialog (Playwright walks every dialog's controls).
 5. Row actions on every table are in the last column, right-aligned on one line, and lone buttons in a column all have the same width.
-9. Every button label is one word unless a second word is needed to tell it apart from a nearby button, and every button has an accessible name that says what it acts on.
-10. Every page and dialog in the page inventory exists, is reachable from the sidebar or the page that owns it, and shows what its row lists (one Playwright walk per row).
 6. Every interactive control measures at least 44 × 44 px, and controls with changing labels keep their size (Playwright measures both).
 7. At 2560 px, list and Settings pages keep their content at 1040 px or less; at 390 px no page scrolls sideways.
 8. Every page passes axe with zero serious or critical violations.
+9. Every button label is one word unless a second word is needed to tell it apart from a nearby button, and every button has an accessible name that says what it acts on.
+10. Every page and dialog in the page inventory exists, is reachable from the sidebar or the page that owns it, and shows what its row lists (one Playwright walk per row).
+11. A list with nothing in it says what belongs there and how to add it; a load that fails shows the reason and Retry. No page shows a blank area.
+12. The result of an action, and any error, appears on the row, card or dialog it was started from; when the row is removed, a status line at the top of its section says what happened. No message pops up elsewhere.
+13. A long list shows 100 rows and a More button that adds the next 100, keeping filters and position, with the number shown.
+14. When live updates stop, a banner says so; when they return, the page reloads its data and the banner goes. A live update never reorders rows or moves the row under the pointer or the keyboard focus.
+15. Every page, open dialog and filter has its own address: reloading returns to the same view, Back closes a dialog, and a notification link opens the item it names.
+16. A setting that fails to save shows the reason on its card and never shows Saved; a field with an invalid value says why at the field.
+17. After the session ends, the sign-in page returns the admin to the address they were on.
+18. With reduced motion requested by the system, nothing animates beyond a fade.

@@ -123,10 +123,11 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** S.
 
 ### Task 0.9: UI shell (Leptos)
-- [ ] **AC (core AC9, core-bootstrap-api AC4, AC5, ui AC1–AC9):**
+- [ ] **AC (core AC9, core-bootstrap-api AC4, AC5, ui AC1–AC9, AC11–AC18):**
   - CSR app built with trunk and `wasm-opt -Oz`, embedded with rust-embed.
   - Login, the first-start setup page, navigation, live event client, API client from `api-types`.
   - Shared building blocks from the UI spec: colour tokens, accent with the contrast rule, density, sidebar, width caps, dialog with unsaved-changes handling, secret field with eye toggle.
+  - Shared behaviour from the UI spec: loading, empty and failed states; results shown where the action was; lists with More; live updates in place with the connection banner; an address per page, dialog and filter; return after sign-in; reduced motion.
 - **V:** Playwright login test and UI-rule checks (sizes, widths, dialog close paths); zero serious or critical axe violations; WASM within budget.
 - **Dep:** 0.6, 0.8.
 - **Files:** `crates/ui/src/*.rs`, `crates/autoplow/src/embed.rs`, `e2e/login.spec.ts`, `e2e/ui-rules.spec.ts`.
@@ -141,11 +142,12 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** S.
 
 ### Task 0.10: Health page and core Settings sections
-- [ ] **AC (ui AC10: Health, Settings › General, API keys, Appearance, About):**
+- [ ] **AC (core AC21; ui AC10: Health, Settings › General, API keys, Appearance, About):**
   - Health: needs attention, components, connections, recent health events. Connections and events fill in as modules land.
   - General: callback base URL, admin and Change password, sign-in switch, trusted proxies, time zone, timing defaults, retention, backups, log levels, bootstrap status.
   - API keys: list with Copy; dialog to rename, change access, show, regenerate, revoke.
   - Appearance: accent with the contrast check, density. About.
+  - Update check: daily, shown on About and Health, with its switch under General.
   - Settings save as they change.
 - **V:** Playwright plus axe; WASM budget.
 - **Dep:** 0.9.
@@ -154,7 +156,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 
 ### Checkpoint: core
 - [ ] Bootstrap seeds an admin user and an API key; `apply` is idempotent; the UI logs in.
-- [ ] Every later module's pages are added to `e2e/ui-rules.spec.ts` (ui AC4, AC5, AC9) as they land.
+- [ ] Every later module's pages are added to `e2e/ui-rules.spec.ts` (ui AC4, AC5, AC9, AC11–AC16) as they land.
 - [ ] All gates pass.
 - [ ] Human review.
 
@@ -765,7 +767,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 
 ### Task 12.3: Replacement checklists and Saltbox integration notes
 - [ ] **AC (project success criterion 3):**
-  - A written checklist per replaced tool (autoscan/autopulse, cloudplow, matcharr, Plex-Auto-Languages), each verified by the live suite.
+  - A written checklist per replaced tool (autoscan/autopulse, cloudplow, matcharr, Plex-Auto-Languages), each verified by the live suite and naming what must be off before the matching feature is switched on.
   - Example bootstrap for the Saltbox role.
 - **V:** walkthrough on a test Saltbox install.
 - **Dep:** 12.2.

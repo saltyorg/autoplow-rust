@@ -27,6 +27,9 @@ Autoplow is a single daemon that keeps a Saltbox media stack consistent and movi
 - multi-user or RBAC administration
 - Windows or macOS hosts
 - a container image
+- telemetry: Autoplow never reports usage anywhere. Its only call of its own is the update check, which can be switched off ([core.md](core.md))
+- updating itself
+- Lidarr in library parity; Lidarr is supported as a scan trigger only
 - a migration tool for importing cloudplow/autoscan config files (the webhook migration helper is a feature, not a v1 success criterion)
 
 **Scale targets** (a large home server; derived from a real install, with headroom):
@@ -34,7 +37,7 @@ Autoplow is a single daemon that keeps a Saltbox media stack consistent and movi
 |---|---|
 | Media under management | ≥ 300 TB |
 | Media servers | ≥ 3 (Plex, Tofa and one of Jellyfin/Emby concurrently) |
-| Arr instances | ≥ 8 (several Sonarr and Radarr variants, plus Lidarr) |
+| Arr instances | ≥ 8 (several Sonarr and Radarr variants, plus Lidarr for scans) |
 | Library size | ≥ 500 000 items per server |
 | Webhook and trigger events | ≥ 20 000 per day, with bursts of ≥ 1 000 per minute |
 | Upload volume | ≥ 10 TB per day across remotes |
@@ -159,10 +162,15 @@ impl FolderPath {
   - run heavy builds or live tests uncapped
   - modify connections or config owned by other tools
 
+## Versions and releases
+- Releases are tagged and follow SemVer. A major version is a breaking change to the API, the bootstrap file, or an upgrade that cannot be done in place.
+- The Saltbox role installs tagged releases only.
+- Upgrades are in place and take a copy first; going back to an older version is not supported ([core.md](core.md)).
+
 ## Success criteria (project level)
 1. Every module's acceptance criteria pass, in its spec under `docs/specs/`.
 2. The scale targets above hold, measured by a load test at the end of each phase that touches the hot path (`scan`, `upload`, `throttle`).
-3. A Saltbox install can switch off autoscan, cloudplow, matcharr and Plex-Auto-Languages and keep equivalent behaviour. Verified by the live test suite plus a written checklist per tool.
+3. A Saltbox install can switch off autoscan, cloudplow, matcharr and Plex-Auto-Languages and keep equivalent behaviour. Verified by the live test suite plus a written checklist per tool. Each checklist says which old tool must be off before the matching Autoplow feature is switched on, so the two never act on the same thing at once.
 4. `CONSTRAINTS.md` gates pass on `main` at every commit.
 
 ## Open questions
