@@ -37,7 +37,7 @@ Notes on the health events *(added 2026-10-30)*:
 ## What a message contains
 - **Fixed format:** a title, one or two sentences in plain words, a severity (problem, recovered or information), the time in the configured time zone, and a link to the Autoplow page where it can be acted on.
 - **The link** uses a setting for Autoplow's address in a browser. Without it, messages carry no link.
-- **Aggregated events** (`upload.completed`, `scan.delivered`, and any type when several are grouped) say how many, over what time span, and name up to five examples.
+- **Aggregated events** (`upload.completed`, `scan.delivered`, `tracks.applied`, and any type when several are grouped) say how many, over what time span, and name up to five examples.
 - **Generic webhook payload:** `{events:[{type, category, timestamp, summary, details}]}`. `details` is typed per event type and documented with the API.
 - No message ever contains a secret.
 - Text from outside (file names, titles, error messages from other services) is escaped for the channel, cannot mention anyone, and never includes an address that carries credentials.

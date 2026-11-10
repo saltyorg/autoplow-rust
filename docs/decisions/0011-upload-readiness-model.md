@@ -1,7 +1,7 @@
 # ADR-0011: Per-file upload readiness model
 
 ## Status
-Accepted
+Accepted. Amended by [ADR-0020](0020-what-a-target-can-see.md): "scanned first" applies to media servers on the same system only.
 
 ## Date
 2026-10-26

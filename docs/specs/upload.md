@@ -1,9 +1,9 @@
 # Spec: the upload pipeline (v1)
 
-**Module:** `upload` · **Depends on:** core, rclone, scan, notifications, downloaders · **Decisions:** ADR-0003, ADR-0011 · **Status:** approved 2026-10-27
+**Module:** `upload` · **Depends on:** core, rclone, scan, notifications, downloaders · **Decisions:** ADR-0003, ADR-0011, ADR-0020 · **Status:** approved 2026-10-27
 
 ## Objective
-Move finished local media to the user's rclone remotes per file, only once it is ready (age, stability, not being written, scanned), without stalling on seeding torrents, and without ever removing a source that was not confirmed uploaded.
+Move finished local media to the user's rclone remotes, or to another local folder, per file, only once it is ready (age, stability, not being written, scanned), without stalling on seeding torrents, and without ever removing a source that was not confirmed uploaded.
 
 ## Non-goals
 - Service-account rotation
@@ -15,7 +15,7 @@ This consolidates the upload decisions in the ADRs in [../decisions/](../decisio
 
 ## Model
 - **Unit of work:** uploads are **per file**. A file enters the upload queue from the local filesystem triggers (inotify, walk, or both) or from Arr import events.
-- **Destinations:** a destination maps a local path to an ordered list of remotes taken from the user's `rclone.conf`. Each remote can have a sub-path.
+- **Destinations:** a destination maps a local path to an ordered list of remotes taken from the user's `rclone.conf`, or local folders. Each can have a sub-path.
   - **A local or NFS folder** *(decided 2026-11-10)* can be used in place of a remote, given as an absolute path. rclone copies to it like any other target; health, cooldowns and failover apply the same way.
   - Two destinations may not have overlapping local paths.
   - **Exclude patterns** per destination keep files out of the queue (for example partial downloads). Symbolic links are never uploaded.
@@ -44,6 +44,7 @@ This consolidates the upload decisions in the ADRs in [../decisions/](../decisio
    - Our scan for that folder must have been sent to every enabled **same-system** target whose libraries contain it. A folder no such target contains passes at once.
    - Targets elsewhere are not waited for: they can only see the file after it is uploaded, so for them the upload comes first and the scan follows (see the scan spec, "Scans and uploads").
    - **Which folder:** a destination's local path and the path scans use for the same folder differ (local disk against the merged view). Each destination records the scan-side path of its local folder, and the two are treated as one folder everywhere: here, in the open-file check and when ignoring Autoplow's own moves. Saltbox's bootstrap fills it in.
+   - **The mount's delay:** each destination has a propagation delay (default 5 minutes): how long the rclone mount on this host takes to show a file after it is uploaded. Scan uses it for same-system targets. It is separate from a target's own delay, which is for a server elsewhere.
    - **Never scanned:** a file with no scan on record (it was there before Autoplow, or its event was missed) is not waited for.
    - **Not forever** *(decided 2026-11-10)*: the upload waits for those scans for up to 30 minutes (configurable per destination), then goes ahead, and the file's row says it was not scanned first. A disabled target is never waited for.
 5. **Hardlinked files (`nlink > 1`)**
@@ -118,7 +119,7 @@ These are the notification types this module raises (the catalogue is in [notifi
 12. With "hold new uploads" on, no new transfer starts, transfers in flight complete, and the hold is still on after a daemon restart.
 13. Stopping a transfer (one or all) leaves the source intact and re-queues the file; nothing is left at the destination.
 14. A file whose scan cannot be sent uploads after the configured wait, marked as not scanned first; a disabled target causes no wait.
-15. With move, the local file is removed only after a confirmed upload and folders left empty are removed up to, not including, the destination's folder; with copy, the local file stays and is not uploaded again until it changes.
+15. With move, the local file is removed only after a confirmed upload and folders left empty are removed from the configured depth down (AC25); with copy, the local file stays and is not uploaded again until it changes.
 16. A file matching an exclude pattern, and a symbolic link, are never queued; a file that vanishes while queued is dropped without an error.
 17. Files present in a destination's folder before it was added are queued by the first walk.
 18. A file that fails 5 times is marked failed, listed with Retry and Discard, and Discard leaves the local file in place.

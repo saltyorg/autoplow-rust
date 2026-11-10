@@ -24,6 +24,7 @@ This was formerly matcharr, the standalone app. It compares what the Arrs manage
 - **After import:**
   - Checks only the imported item.
   - Runs a configurable delay (default 10 minutes) after our scan for it was delivered.
+  - Grouped per item: many imports for one show make one check, started from the last scan delivered for it. They wait while a full check runs, and none is made for a scan that was dropped or dead-lettered.
 - A full check is a long job. Two never run at once.
 
 ## What is compared
@@ -88,7 +89,6 @@ Based on autoplow's phased approach, with fixes.
 - A pair is checked only if both sides were listed completely. If a server or an Arr is unreachable, or a listing fails part-way, that pair is abandoned for this run: no finding is created, resolved or notified, and the run's result says which pairs were skipped and why.
 - A disabled target is not checked.
 - A run cut off by a restart counts for nothing: the next run compares against the last complete one. A fix cut off before its read-back is verified at the next start.
-- **After-import checks** are grouped per item: many imports for one show make one check, started from the last scan delivered for it. They wait while a full check runs, and none is made for a scan that was dropped or dead-lettered.
 
 ## Merged items (Plex)
 - These are items whose locations span different item folders.

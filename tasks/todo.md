@@ -47,7 +47,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** S.
 
 ### Task 0.3: Store and migrations
-- [ ] **AC (core AC4, AC14–AC16, AC28, AC31; gdrive AC14 in part):**
+- [ ] **AC (core AC4, AC14–AC16, AC28, AC31 in part (the disk reserve); gdrive AC14 in part):**
   - SQLite in WAL mode, one writer and a reader pool.
   - Embedded, versioned migrations, with a copy taken first; a newer database is refused.
   - Compare-and-set helper.
@@ -61,7 +61,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** M.
 
 ### Task 0.4: Supervisor and component lifecycle
-- [ ] **AC (core AC1–AC3, AC19):**
+- [ ] **AC (core AC1–AC3, AC19, AC31 in part (schedules missed or falling in a clock change)):**
   - Restart with backoff (1 s doubling to 60 s), including after a panic, with the component named in the log.
   - Capability checks per feature, reported on Health (core AC19).
   - A config change rebuilds only the dependent components.
@@ -86,7 +86,8 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 ### Task 0.6: HTTP server, auth and secrets
 - [ ] **AC (core AC6, AC7, AC10–AC13, AC17, AC22, AC24–AC27, AC30):**
   - `/api/v1`, RFC 9457 errors, body limits, open `/health`, OpenAPI.
-  - API keys (admin, read-only); `/metrics` needs a key.
+  - API keys (admin, read-only, metrics), read-only limited to `GET` without the admin-only reads; `/metrics` needs a key of any scope.
+  - Host check, forwarded headers only from trusted proxies, cookie and CSRF rules, response headers, security events; restore clears sessions (core AC31 in part).
   - Argon2 admin user; sessions (30 days, sign out, ended on password change).
   - Login lockout per client address, with trusted proxies.
   - `autoplow reset-password`.
@@ -102,7 +103,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - [ ] **AC (core-bootstrap-api AC2, AC3, AC7–AC9, AC11–AC14):**
   - `PUT`/`PATCH`/`DELETE` by name; fixed IDs with rename; versions with `If-Match`; deletes refused with the list of dependents.
   - Cursor paging with stable order.
-  - Long jobs: 202, progress, one at a time, interrupted on restart.
+  - Long jobs: 202, progress, one at a time, interrupted on restart unless the job resumes by itself.
   - `apply` with `seed`/`upsert` and `dry_run`.
   - Changes notify the supervisor.
   - Route table with its authentication matrix.
@@ -144,9 +145,9 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 
 ### Task 0.10: Health page and core Settings sections
 - [ ] **AC (core AC21; ui AC10: Health, Settings › General, API keys, Appearance, About):**
-  - Health: needs attention, components, connections, recent health events. Connections and events fill in as modules land.
+  - Health: needs attention, components, connections, recent health events, security events. Connections and events fill in as modules land.
   - General: callback base URL, admin and Change password, trusted proxies, time zone, timing defaults, retention, backups, log levels, bootstrap status.
-  - API keys: list with Copy; dialog to rename, change access, show, regenerate, revoke.
+  - API keys: list with Copy; dialog to rename, change access (admin, read-only, metrics), show, regenerate, revoke.
   - Appearance: accent with the contrast check, density. About.
   - Update check: daily, shown on About and Health, with its switch under General.
   - Settings save as they change.
@@ -164,7 +165,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 ## Phase 1: `notifications`
 
 ### Task 1.1: Outbox and dispatcher
-- [ ] **AC (notifications AC1–AC3, AC7–AC10, AC13):**
+- [ ] **AC (notifications AC1–AC3, AC7–AC10, AC13; core AC31 in part (unsent notifications older than a restore are discarded)):**
   - Transactional outbox.
   - Aggregation window, and storm summaries above 20 waiting messages.
   - Problems notify only after lasting 2 minutes; recovery only if the problem was sent; flapping reported once.
@@ -196,6 +197,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 ### Task 2.1: Shared HTTP client and library resolver
 - [ ] **AC (targets AC2–AC4, AC8–AC12, AC14–AC17; scan AC8, the containment part):**
   - Uses the core outbound client; paged listings.
+  - Where the target runs (same system or elsewhere) with its propagation delay; request lanes; a disabled target receives no call.
   - Pacing: one request at a time per target with a gap.
   - Health states, backoff to 15 minutes, status call while unhealthy, unavailable after 2 minutes.
   - Disabled targets, keeping or dropping their scans.
@@ -297,7 +299,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 ## Phase 4: `scan`
 
 ### Task 4.1: Per-target durable queue
-- [ ] **AC (scan AC2, AC3, AC5, AC15, AC17, AC24–AC26):**
+- [ ] **AC (scan AC2, AC3, AC5, AC15, AC17):**
   - Merging many waiting folders into their parent, never a library root.
   - Send now goes first for its target.
   - Generation acknowledgement.
@@ -325,9 +327,9 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 
 ### Task 4.3: Trigger framework and auth
 - [ ] **AC (scan AC1, AC18, plus spec "Common to all triggers"):**
-  - Back-pressure above 10 000 unprocessed events.
+  - Back-pressure above 10 000 unprocessed events, and per trigger; body and path-count limits (scan AC26).
   - Per-instance or global credentials.
-  - Header, basic or query auth (any one passes).
+  - Header or basic auth (any one passes); a query token only on the legacy and Bazarr routes; failed attempts slowed per address.
   - Filters, target excludes, extra wait per event type.
 - **V:** auth matrix and filter tests.
 - **Dep:** 4.1, 0.7.
@@ -338,7 +340,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - [ ] **AC (scan AC1, AC5, AC8, AC19):**
   - Unmatched folders listed with their trigger; delivered history for 7 days.
   - Arr events produce folder scans, resolved to libraries by path components.
-  - `POST /scans` with `dry_run` preview (rewrite, library, existence).
+  - `POST /scans` with `dry_run` preview (rewrite, library, and existence for same-system targets).
   - Scans page with wait reasons and dead letters; the Scan dialog with its live preview (ui AC10).
 - **V:** API tests; Playwright plus axe.
 - **Dep:** 4.2, 4.3, 3.2.
@@ -357,8 +359,8 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** M.
 
 ### Task 4.6: Anchors, "path must exist", verified Plex empty trash
-- [ ] **AC (scan AC6, AC7, AC16, Plex trash row):**
-  - "Path must exist" checked on the host; dead-lettered after 1 hour if the folder never appears.
+- [ ] **AC (scan AC6, AC7, AC16, AC25, AC24 in part (waits held by an anchor), Plex trash row):**
+  - "Path must exist" checked on the host, for same-system targets only; dead-lettered after 1 hour if the folder never appears.
   - Anchors (a file, its targets and an optional folder); all applicable anchors required.
   - Hold-and-retry existence check; deletes exempt.
   - Empty trash only after the scan is observed to complete.
@@ -379,7 +381,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** S.
 
 ### Task 4.8: Local filesystem trigger
-- [ ] **AC (scan AC20, triggers table):**
+- [ ] **AC (scan AC20, AC24 in part (no deletes reported under a missing anchor), triggers table):**
   - Close-after-write events, ignore patterns, walking past the watch limit.
   - inotify, walk or both per path.
   - The walk snapshot is persisted (new, changed and deleted files).
@@ -419,7 +421,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 ## Phase 5: `rclone`
 
 ### Task 5.1: Supervised `rcd` and RC client
-- [ ] **AC (rclone AC1–AC8, AC10–AC12, AC15–AC17):**
+- [ ] **AC (rclone AC1–AC8, AC10–AC12, AC16):**
   - Child tied to Autoplow; leftovers stopped at start; hung child detected; transfers stopped and re-queued on shutdown; output in Autoplow's log.
   - Unix socket in a 0700 directory.
   - Minimum version 1.75, no maximum; configurable binary path; `rclone.unsupported` below the minimum.
@@ -435,9 +437,9 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** M.
 
 ### Task 5.2: Start on demand and Settings › rclone
-- [ ] **AC (rclone AC9, AC13, AC14; ui AC10: Settings › rclone):**
-  - Extra options and environment, with the controlled ones refused.
-  - Restart when idle after a config change; Reload.
+- [ ] **AC (rclone AC9, AC13–AC15, AC17; ui AC10: Settings › rclone):**
+  - Extra options and environment, with the refused families rejected when saved, and a clean environment for the child.
+  - Restart when idle after a config change, ignoring token renewals, and within an hour at most; Reload.
   - The child runs only while a destination or a crypt Drive monitor needs it.
   - Settings › rclone: config path, version, state or "not needed", read-only remotes with users and health.
 - **V:** integration test: no child with nothing configured, started when a destination is added; Playwright plus axe.
@@ -463,7 +465,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** M.
 
 ### Task 6.2: Drive monitors
-- [ ] **AC (gdrive AC2–AC5, AC11–AC13, AC14 in part (a snapshot is rebuilt after a restore), AC15–AC18):**
+- [ ] **AC (gdrive AC2–AC5, AC11–AC13, AC15–AC17, AC14 in part (a snapshot is rebuilt after a restore)):**
   - Folder-limited monitors; one snapshot per drive; first snapshot silent and resumable.
   - Shortcuts, multiple parents, restored items and Google documents.
   - Lost shared-drive access stops the monitor.
@@ -478,7 +480,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** M.
 
 ### Task 6.3: Crypt remotes
-- [ ] **Spike first:** confirm against rclone 1.75 that `decode` through `rc` handles full paths, directory-name encryption on and off, every filename encoding, and snapshot-sized batches. Record the result in `docs/platform-notes/`.
+- [ ] **AC (gdrive AC18, with the crypt ACs below).** **Spike first:** confirm against rclone 1.75 that `decode` through `rc` handles full paths, directory-name encryption on and off, every filename encoding, and snapshot-sized batches. Record the result in `docs/platform-notes/`.
 - [ ] **AC (gdrive AC6):**
   - Snapshot stores encrypted and decrypted names; polls decode only unseen names.
   - Rewrite rules and filters match decrypted paths.
@@ -539,8 +541,8 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 ## Phase 8: `upload`
 
 ### Task 8.1: Destinations and per-file queue
-- [ ] **AC (upload AC4–AC6, AC15–AC18, AC20):**
-  - Move or copy, removing empty folders; exclude patterns; first walk for files already there; failed list after 5 attempts; overlapping destinations refused.
+- [ ] **AC (upload AC4–AC6, AC15–AC18, AC20, AC25, AC26):**
+  - Move or copy, removing empty folders from a set depth; a local folder as a target; the scan-side path of the local folder; exclude patterns; first walk for files already there; failed list after 5 attempts; overlapping destinations refused.
   - Queue keyed by identity (dev, ino) plus path.
   - Tracking by job and group.
   - Source removed only after success.
@@ -552,15 +554,16 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 
 ### Task 8.2: Readiness: age, stability, mtime hygiene, hardlinks, scanned-first
 - [ ] **AC (upload AC1, AC9, AC14, AC22; scan AC22, AC23):**
-  - Scanned first, with the 30-minute limit; a disabled target is not waited for.
+  - Supplies scan's two questions (where a folder's file is, and whether a local delete was Autoplow's own move), so scans wait for uploads and mounts as the scan spec says.
+  - Scanned first for same-system targets, with the 30-minute limit; a disabled target is not waited for.
   - First-seen age (2 min) that restarts on an mtime change.
   - Two stability checks 30 s apart.
   - Future-mtime warning, or the opt-in fix.
   - Hardlink policy.
-  - Scanned-first gate.
+  - Scanned-first gate (same-system targets).
 - **V:** paused-clock and filesystem tests.
-- **Dep:** 8.1, 4.1.
-- **Files:** `crates/upload/src/readiness/*.rs`.
+- **Dep:** 8.1, 4.2, 4.8.
+- **Files:** `crates/upload/src/readiness/*.rs`, `crates/scan/src/gate.rs`.
 - **Size:** M.
 
 ### Task 8.3: Open-file detection (optional capability)
@@ -577,12 +580,13 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** M.
 
 ### Task 8.4: Concurrency, failover, schedules
-- [ ] **AC (upload AC7, AC8, AC12, AC13, AC19, AC23–AC29):**
+- [ ] **AC (upload AC7, AC8, AC12, AC13, AC19, AC23, AC24, AC27–AC29):**
   - Cooldown lengths: 24 h for a limit, growing for repeated failures.
   - Global cap plus per-remote caps.
   - Hold new uploads (persisted) and stop one or all transfers.
   - Remote-health cooldown.
-  - Schedule windows that let transfers in flight finish.
+  - Schedule windows, global or per destination, that let transfers in flight finish.
+  - Upload now; stalled transfers stopped and re-queued; a source replaced mid-transfer; nothing counted while rclone is unavailable.
 - **V:** fake-transport tests.
 - **Dep:** 8.1.
 - **Files:** `crates/upload/src/{scheduler,health}.rs`.
@@ -598,7 +602,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** S.
 
 ### Task 8.6: Upload UI
-- [ ] **AC (ui AC10: Uploads, Destination, Settings › Uploads):** destinations with their dialog, queue with readiness reasons, live transfers with Hold and Stop, remote health, global upload settings.
+- [ ] **AC (ui AC10: Uploads, Destination, Settings › Uploads):** destinations with their dialog, queue with readiness reasons, live transfers with Upload now, Hold and Stop, remote health, global upload settings.
 - **V:** Playwright plus axe; WASM budget.
 - **Dep:** 8.1–8.5, 0.9.
 - **Files:** `crates/ui/src/pages/uploads/*.rs`.
@@ -619,7 +623,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 ## Phase 9: `throttle`
 
 ### Task 9.1: Session registry
-- [ ] **AC (throttle AC1, AC2, AC11, AC12):**
+- [ ] **AC (throttle AC1, AC2, AC11, AC12, AC17):**
   - Which kinds of playback count; an unreadable server counts as zero; sessions dropped after 2 minutes without an update.
   - Plex, Jellyfin and Emby websockets, plus Tofa polling.
   - Each server counted once.
@@ -642,8 +646,8 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** S.
 
 ### Task 9.3: Download-client limiters
-- [ ] **AC (throttle AC7–AC10, AC16, AC17; downloaders AC4):**
-  - One limiter per client and direction, each with its own mode.
+- [ ] **AC (throttle AC7–AC10, AC16; downloaders AC4):**
+  - One limiter per client and direction, each with its own mode; pausing a client above a number of streams.
   - Works with no upload destinations.
   - By-bitrate rejected for client limiters.
   - An unreachable client does not delay other limiters.
@@ -653,7 +657,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** S.
 
 ### Task 9.4: Throttle UI
-- [ ] **AC (ui AC10: Throttle, Limiter):** every limiter with its current limit and mode, and its dialog; sessions; options.
+- [ ] **AC (ui AC10: Throttle, Limiter):** every limiter with its current limit and mode, and its dialog; sessions; options, including the per-client stream pause.
 - **V:** Playwright plus axe.
 - **Dep:** 9.3, 0.9.
 - **Files:** `crates/ui/src/pages/throttle.rs`.
@@ -665,7 +669,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 ## Phase 10: `parity`
 
 ### Task 10.1: Engine
-- [ ] **AC (parity AC1, AC2, AC5, AC9–AC11, AC13–AC16):**
+- [ ] **AC (parity AC1, AC2, AC5, AC9–AC11, AC13–AC15):**
   - Phased, paced fetch and a streaming path-keyed join.
   - Findings: mismatches, gaps both ways, file mismatches, merged items.
   - Unknown agents reported, never modified.
@@ -680,7 +684,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** M.
 
 ### Task 10.2: Fixes and triggers
-- [ ] **AC (parity AC3, AC4, AC6–AC8, AC12):**
+- [ ] **AC (parity AC3, AC4, AC6–AC8, AC12, AC16):**
   - Review-first; auto-fix opt-in per server and finding type.
   - Scans queued as the fix for missing and stale files.
   - Safety limit suspends automatic fixing for the run and says so in the completion notice.
@@ -723,7 +727,8 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 ### Task 11.2: Users, preferences, triggers, apply
 - [ ] **AC (track-preferences AC1, AC2, AC4–AC6, AC8–AC18):**
   - Shared-server tokens, never logged; refresh on failure; users without a token skipped.
-  - Preferences per (user, show GUID), per Plex target.
+  - Preferences per (user, show GUID), or per season with season scope, per Plex target.
+  - Track changes made without playing (own switch); ignored file patterns; `tracks.applied`.
   - Recording: first play, then real changes only; a fallback is never recorded.
   - Scope per target, library, show exclusion and the ignore label.
   - Play, new-episode and sweep triggers, each switchable; the sweep limited to changed episodes.
@@ -737,7 +742,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** M.
 
 ### Task 11.3: Track preferences UI
-- [ ] **AC (ui AC10: Track preferences, User):** users with their dialog, preferences (edit and clear), excluded shows, where it applies, scope settings, Sweep with progress, and the history.
+- [ ] **AC (ui AC10: Track preferences, User):** users with their dialog, preferences (edit and clear), excluded shows, where it applies with ignored file patterns, the switch for changes made without playing, scope settings, Sweep with progress, and the history.
 - **V:** Playwright plus axe.
 - **Dep:** 11.2, 0.9.
 - **Files:** `crates/ui/src/pages/tracks.rs`.

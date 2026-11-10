@@ -22,7 +22,7 @@ Plex only. Tofa has native per-profile language preferences, so PAL doesn't appl
   - channel layout
   - titles
   - flags: forced, hearing-impaired (HI), visually-impaired (VI), descriptive
-- **Identity:** a preference is keyed by the show's Plex GUID, so it survives a show being re-added or a library being rebuilt. Preferences belong to one Plex target.
+- **Identity:** a preference is keyed by the show's Plex GUID (and the season number, with season scope), so it survives a show being re-added or a library being rebuilt. Preferences belong to one Plex target.
 - **Recording** *(decided 2026-11-10)*:
   - The first play of a show by a user records what is selected.
   - After that, a play records a new preference only when the selection differs from what the stored preference would pick for that episode **and** the preferred track was available on it.
@@ -85,10 +85,11 @@ Plex only. Tofa has native per-profile language preferences, so PAL doesn't appl
 - An episode that already has the right tracks selected is not written.
 
 ## Events raised
+This is the notification type this module raises (the catalogue is in [notifications.md](notifications.md)).
 - `tracks.applied`: preferences were applied for a user; grouped, naming the user, the show and how many episodes changed. It names no other user. *(Added to the catalogue 2026-11-10.)*
 
 ## Acceptance criteria
-1. When a user changes tracks during playback, a preference is stored for (user, show) and applied to the configured scope (show/season × all/next).
+1. When a user changes tracks during playback, a preference is stored for (user, show), or (user, show, season) with season scope, and applied to the configured scope (show/season × all/next).
 2. New or upgraded episodes get every stored preference applied, per user, using that user's token; tokens never appear in logs.
 3. PAL's matching test cases pass (language, VI, descriptive, forced/HI, tie-break), plus the fixed cases (reference commentary state, multiple selected streams, multi-part episodes).
 4. Concurrent events for the same (user, show) are serialised; the final selection equals the last preference.

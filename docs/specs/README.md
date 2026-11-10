@@ -35,6 +35,7 @@
 - **Data directory:** where the database, backups and logs live.
 
 **Rules:**
+- **A module may ask a later one a question without depending on it.** The earlier module defines the question and a default answer; the later one supplies the real answer when it is built. `scan` does this for upload state (see the scan spec, "Scans and uploads"), and `upload` for throttle's hold.
 - **Raising an event needs only `core`.** Core defines the call that records an event; `notifications` stores and delivers it. A module lists `notifications` only when it reads delivery state.
 - Dependencies point one way.
 - The contract between two modules belongs in the provider module's spec.

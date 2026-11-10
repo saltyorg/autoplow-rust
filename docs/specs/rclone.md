@@ -27,8 +27,8 @@ Run and supervise `rclone rcd` as a private child process, and give `upload`, `t
   - **Shutdown** *(decided 2026-11-10)*: when Autoplow stops, running transfers are stopped. Their files stay where they are and are queued again at the next start.
   - **Its output** goes to Autoplow's log under the `rclone` component, at that component's level.
 - **Options** *(decided 2026-11-10)*:
-  - The admin can give extra command-line options and environment variables for the child (chunk sizes, API pacing, a config password, a user agent). Values that are secrets are stored like other secrets.
-  - Autoplow refuses the options it must control itself (the control socket, the config path, the bandwidth limit) and says why. Its own bandwidth limit always wins over one in the environment.
+  - The admin can give extra command-line options and environment variables for the child (chunk sizes, API pacing, a config password, a user agent). Values that are secrets are stored like other secrets. `RCLONE_CONFIG_PASS` is allowed; it is the password, not the location, of the config.
+  - Autoplow refuses the options it must control itself, when they are saved, and says why. The list is under "Options that are refused" below.
 - **The config file:**
   - Autoplow never writes to `rclone.conf`. rclone itself saves refreshed tokens there, so the file must be writable by the service's account. Other rclone processes on the host (a mount) may use the same file.
   - **Changes** *(decided 2026-11-10)*: Autoplow watches the file. When it changes, the child is restarted as soon as no transfer is running, and Settings › rclone says a restart is pending until then. **Reload** restarts it at once; running transfers are stopped and re-queued.
@@ -41,9 +41,9 @@ Run and supervise `rclone rcd` as a private child process, and give `upload`, `t
   - `backend/command` with the crypt `decode` command, in batches (for `gdrive` crypt remotes)
 - **Polling:** completion and progress, by job ID and group.
 - **Cleanup:** finished stats groups are swept.
-- **Limits on a fresh child:** whenever the child starts (first start, crash, Reload, config change), the current bandwidth limit is applied before any transfer is started. At daemon start, uploads wait for the first reading of stream counts, for at most 30 seconds.
+- **Limits on a fresh child:** whenever the child starts (first start, crash, Reload, config change), the current bandwidth limit is applied before any transfer is started.
 - **Which config changes count:** rclone rewrites the file itself when it renews a token. A change that only touches token fields is ignored. For any other change, if no idle moment comes within 1 hour, new transfers are held until the running ones finish, and the child restarts then.
-- **Options that are refused** *(security review, 2026-11-10)*: anything that opens a listener, moves the config or the log, prints credentials, or sets the bandwidth limit. That is the `--rc`, `--metrics`, `--config`, `--log-file`, `--dump`, `--bwlimit` and `--password-command` families, and the same settings given as `RCLONE_` variables. Names are compared after normalising, so a different spelling does not slip through.
+- **Options that are refused** *(security review, 2026-11-10)*: anything that opens a listener, moves the config or the log, prints credentials, or sets the bandwidth limit. That is the `--rc`, `--metrics`, `--log-file`, `--dump`, `--bwlimit` and `--password-command` families and `--config` itself, and the same settings given as `RCLONE_` variables. Names are compared after normalising, so a different spelling does not slip through.
 - **Environment:** the child gets only the variables the admin listed, plus a short fixed set (`HOME`, `PATH`, `TZ`, proxy settings). It never gets Autoplow's secret key, and it does not inherit any capability the service holds.
 - **Secret values** are passed as environment variables only. An option on the command line cannot be marked secret.
 - **The rclone path** must be absolute, a regular file, and not writable by anyone but its owner and root.
@@ -67,7 +67,7 @@ These are the notification types this module raises (the catalogue is in [notifi
 11. A child that stops answering is killed and restarted within 2 minutes, and job state is reported lost.
 12. On shutdown, running transfers are stopped, their sources are intact, and they are queued again after restart.
 13. A remote added to `rclone.conf` is available after the child restarts when idle, without restarting Autoplow; Reload makes it available at once.
-14. An extra option Autoplow must control is refused with the reason; any other is passed to the child; a bandwidth limit in the environment does not override the throttle's.
+14. An extra option Autoplow must control is refused with the reason; any other is passed to the child.
 15. An extra option or environment variable from a refused family is rejected when saved, whatever its spelling, and the child's environment holds neither Autoplow's secret key nor any variable the admin did not list beyond the fixed set.
 16. After every child start, the current bandwidth limit is in place before the first transfer begins.
 17. A config change that only renews a token causes no restart; another change restarts the child within an hour even with transfers always running.

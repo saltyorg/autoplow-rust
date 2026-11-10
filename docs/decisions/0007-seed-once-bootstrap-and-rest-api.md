@@ -1,7 +1,7 @@
 # ADR-0007: Seed-once bootstrap file, idempotent REST API, API-only UI
 
 ## Status
-Accepted
+Accepted. Amended by [ADR-0019](0019-admin-access-and-security-rules.md): stored secrets can be shown to the admin, so "Secrets are write-only" below no longer holds.
 
 ## Date
 2026-10-25

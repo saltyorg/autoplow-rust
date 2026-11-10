@@ -1,7 +1,7 @@
 # ADR-0020: What a target can see decides when it is scanned
 
 ## Status
-Accepted
+Accepted. Amends [ADR-0011](0011-upload-readiness-model.md) ("scanned first").
 
 ## Date
 2026-11-10
@@ -36,6 +36,7 @@ Neither holds in general. A media server may run on another machine and see medi
 - **Not in v1.** It can be added later without changing the rule.
 
 ## Consequences
-- Targets gain one setting and a propagation delay; destinations gain a scan-side path, which Saltbox's bootstrap fills in.
+- Targets gain one setting and a propagation delay for a server elsewhere. Destinations gain a scan-side path, which Saltbox's bootstrap fills in, and a delay of their own for the mount on this host.
+- `scan` is built before `upload` and must not depend on it. Scan defines the two questions it needs answered (where a folder's file is; whether a local delete was Autoplow's own move) and `upload` supplies the answers.
 - "Scanned first" applies to same-system targets only.
 - The scan queue has new wait reasons: waiting for the upload, and waiting for the mount.

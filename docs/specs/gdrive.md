@@ -13,13 +13,15 @@ Turn Google Drive changes (My Drive and shared drives) into scan events for the 
 1. The user creates a Google Cloud OAuth client of type **Web application**. The UI includes a step-by-step guide with screenshots.
 2. They enter its client ID and secret in our UI. Each set is stored once as an **OAuth client**, with the secret encrypted, and can be reused for several Google accounts.
 3. They click **Connect**:
-   - The browser goes through Google consent, requesting `drive.readonly` and offline access.
+   - The browser goes through Google consent, requesting read-only access (`drive.readonly`, or the narrower metadata-only scope if the spike below shows it is enough) and offline access.
    - Google redirects to `<Autoplow's browser address>/api/v1/gdrive/oauth/callback` with a state parameter. The address comes from the "Autoplow in your browser" setting, which must be set before connecting.
    - The refresh token is stored encrypted, and key rotation re-encrypts it too.
 4. The UI shows the exact redirect URI to register and checks that the request reached us on that URL. Saltbox domains provide HTTPS.
 5. **The setup guide must cover publishing the OAuth app.** Left in Google's "testing" state, a sign-in expires after 7 days and monitors would stop every week. When a grant expires about a week after it was made, the `gdrive.account.revoked` message says that this is the likely cause.
 6. Several Google accounts are supported. Their tokens are refreshed automatically, and a revoked or expired grant raises a `gdrive.account.revoked` notification.
-- **The sign-in round trip** *(security review, 2026-11-10)*: the state value is used once, lasts 10 minutes, and is tied to the browser that started it. The callback page shows nothing from the request and returns to a fixed page in the UI. Deleting an account also withdraws Autoplow's access at Google.
+
+**Rules for the round trip** *(security review, 2026-11-10)*:
+- The state value is used once, lasts 10 minutes, and is tied to the browser that started it. The callback page shows nothing from the request and returns to a fixed page in the UI. Deleting an account also withdraws Autoplow's access at Google.
 - **Scope:** read-only access to file details is enough for following changes. The crypt spike also records whether Google's narrower metadata-only scope works for shared drives; if it does, that scope is used.
 
 ## Monitors
@@ -106,7 +108,7 @@ A read-only view of what the snapshot holds for a monitor:
 - A change seen in the Drive API isn't visible to the rclone VFS mount until the mount's own change polling notices it (rclone's `--poll-interval`, default 1 minute).
 - **Decided:**
   - The monitor's default minimum age is set **above the mount's poll interval**.
-  - The trigger does **not** check whether paths exist. If needed, the scan pipeline's generic "path must exist before delivery" check handles that (see [scan.md](scan.md)).
+  - The trigger does **not** check whether paths exist. If needed, the scan pipeline's "path must exist" check handles that for same-system targets (see [scan.md](scan.md)).
 
 ## Not in v1
 - Service accounts.

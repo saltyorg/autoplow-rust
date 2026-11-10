@@ -14,7 +14,7 @@ Format: Status, Date, Context, Decision, Alternatives Considered, Consequences. 
 | [0008](0008-sqlite-and-per-target-durable-queues.md) | SQLite with per-target durable queues | Accepted |
 | [0009](0009-folder-level-scans-only.md) | Folder-level partial scans only | Accepted |
 | [0010](0010-component-path-matching-and-scoped-rewrites.md) | Component path matching and scoped rewrites | Accepted |
-| [0011](0011-upload-readiness-model.md) | Per-file upload readiness model | Accepted |
+| [0011](0011-upload-readiness-model.md) | Per-file upload readiness model | Accepted (amended by 0020) |
 | [0012](0012-managed-arr-connections.md) | Managed Arr webhook connections | Accepted |
 | [0013](0013-google-drive-via-user-oauth-client.md) | Google Drive with the user's own OAuth client | Accepted |
 | [0014](0014-v1-feature-scope.md) | v1 feature scope | Accepted (amended by 0017) |

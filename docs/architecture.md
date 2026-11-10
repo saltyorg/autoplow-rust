@@ -30,7 +30,7 @@ These come directly from the failures we saw in earlier projects.
 
  Session sources (Plex/Emby/Jellyfin websockets, Tofa polling) ─▶ Session registry ─▶ Throttle controller ─┬▶ core/bwlimit (rclone)
                                                                                                            └▶ Downloaders (speed limits)
- Upload pipeline ─▶ Downloaders (pause) ─▶ SABnzbd / NZBGet / qBittorrent
+ Upload pipeline, throttle ─▶ Downloaders (pause) ─▶ SABnzbd / NZBGet / qBittorrent
  Plex notifications ─▶ PAL (one queue per show/user) ─▶ Plex parts API
  Arr connection reconciler ─▶ Arr APIs (keeps our webhook correct)
  Schedulers: parity sweeps, library-cache refresh, retention cleanup
@@ -86,7 +86,7 @@ These come directly from the failures we saw in earlier projects.
     - A minimum age counted from first-seen, which restarts whenever mtime changes.
     - A stable size.
     - Not open for writing. This check is optional and needs to read other processes' open files (it tests at start whether it can): `/proc` fds and write locks matched by dev+inode.
-    - Scanned first.
+    - Scanned first, for media servers on the same system (ADR-0020).
     - A setting for hardlinked files.
     - See [specs/upload.md](specs/upload.md).
   - **Execution:** batches are submitted as rclone jobs with **one stats group per job**. Uploads are tracked by job ID and source path, never by basename.
@@ -139,7 +139,7 @@ These come directly from the failures we saw in earlier projects.
 
 ### Track preferences (Plex, formerly PAL)
 - Plex websocket events are put onto a **per-(user, show) serialized queue**, a keyed work queue, so concurrent events for the same show cannot race. PAL had that race.
-- Preferences are **stored per (user, show)** when tracks change, instead of being derived from a watched episode. See [specs/track-preferences.md](specs/track-preferences.md).
+- Preferences are **stored per (user, show)**, or per season with season scope, when tracks change, instead of being derived from a watched episode. See [specs/track-preferences.md](specs/track-preferences.md).
 - The matching algorithm is ported from PAL, including its tie-break tests.
 
 ### Google Drive

@@ -1,6 +1,6 @@
 # Spec: the scan pipeline (v1)
 
-**Module:** `scan` · **Depends on:** core, targets, arr, notifications · **Decisions:** ADR-0008, ADR-0009, ADR-0010 · **Status:** approved 2026-10-27
+**Module:** `scan` · **Depends on:** core, targets, arr, notifications · **Decisions:** ADR-0008, ADR-0009, ADR-0010, ADR-0020 · **Status:** approved 2026-10-27
 
 ## Objective
 Turn every change signal (Arr events, legacy/Bazarr/generic webhooks, local filesystem, manual/API; Drive via `gdrive`) into the minimal, correct set of folder scans on every relevant media server, without ever losing an event, and with one slow or offline server never delaying the others.
@@ -36,9 +36,9 @@ Common to all triggers:
 - **Target excludes:** a trigger can list targets it must never feed, to prevent loops.
 - **Extra wait per event type:** optional, added on top of the trigger's minimum age, and set in the trigger's dialog.
 - Each trigger has its own **minimum age** and its own **rewrite rule set**.
-- Auth: header token, basic auth or query token, in any combination. Each trigger uses either the global shared credentials or its own (the user chooses). Auto-configured triggers default to their own per-instance credentials. A request needs to satisfy any one of the enabled methods. There is no open mode. The managed Arr connections also carry a fingerprint header.
+- Auth: header token or basic auth, in any combination; a query-string token only on the legacy routes and for Bazarr, which cannot send a header (see the security rules in the core spec). Each trigger uses either the global shared credentials or its own (the user chooses). Auto-configured triggers default to their own per-instance credentials. A request needs to satisfy any one of the enabled methods. There is no open mode. The managed Arr connections also carry a fingerprint header.
 - A `Test` event returns 2xx and queues nothing.
-- **Back-pressure** *(decided 2026-11-10)*: a trigger request is refused with 503 and `Retry-After` when more than 10 000 received events are still waiting to be turned into queue entries, or when the database can't be written. Nothing is acknowledged and then lost.
+- **Back-pressure** *(decided 2026-11-10)*: a trigger request is refused with 503 and `Retry-After` when more than 10 000 received events are still waiting to be turned into queue entries, when that trigger alone holds more than half of them, or when the database can't be written. Nothing is acknowledged and then lost.
 
 ## Watching local folders
 - **Events that count:** a file closed after writing, a file or folder moved in, moved out or deleted. A file still being written produces nothing until it is closed.
@@ -62,6 +62,7 @@ Common to all triggers:
    - **Merging up** *(decided 2026-11-10)*: when more than 10 folders waiting for one target share a parent, they are replaced by one scan of that parent. The threshold is adjustable per target and can be switched off. A merge never produces a library root.
 4. **Readiness:** an entry is ready once the trigger's minimum age has passed since its last event, or once the target's maximum wait has passed since its first event.
 5. **Order:** by ready time, first in first out. There are no priorities, with one exception:
+   - When several triggers feed one entry, the longest minimum age among them applies.
    - **Send now** *(decided 2026-11-10)*, from a manual scan or on a waiting entry, ends that entry's wait and sends it next for its target, ahead of other waiting entries. Anchors, pacing, and a disabled or unavailable target still apply.
 6. **Never lost:** an event that arrives after dispatch bumps the generation, so the entry stays queued and another scan follows.
 
@@ -71,6 +72,11 @@ Common to all triggers:
   - **Target elsewhere:** the scan waits until the file's upload has finished, then that target's propagation delay. If uploads are switched off or the folder is under no destination, it is sent after the normal wait.
   - **File already uploaded, target on the same system:** the scan waits until the file is visible again at the path the target uses, for at most the mount's propagation delay (default 5 minutes, set per destination), then is sent anyway.
   - The wait reason says which of these applies.
+  - **How scan learns this without depending on `upload`:** scan defines a small question it asks before sending ("where is this folder's file: local, uploading, uploaded and when, or not something that is uploaded?") and a filter for local deletes ("was this Autoplow's own move?"). `upload`, which is built later and already depends on scan, supplies the answers. Until it does, and on installs without uploads, every file counts as local and nothing is filtered.
+  - **These waits are holds, outside the minimum age and maximum wait.** The maximum wait never sends a scan to a target elsewhere before the upload is done.
+  - **Which files:** an entry is for a folder; it waits for the files named by its own events.
+  - **When the upload will not happen** (the file failed, was discarded or excluded, or the destination copies and keeps it local for no remote): the wait ends and the scan is sent. In any case an entry waits at most 24 hours for an upload (configurable per target).
+  - **Send now** ends the wait for the mount, but not the wait for an upload to a target elsewhere, where the scan could find nothing.
   - **Autoplow's own moves are not events.** A file removed locally because Autoplow uploaded it raises no delete, from any trigger watching that folder.
 - **Path must exist (optional):** per trigger and per target, for same-system targets only. Add and change entries are held until the folder exists. Deletes are exempt.
   - The check is made on the host, at the path as Autoplow sees it. Autoplow cannot look inside a media server.
@@ -83,7 +89,7 @@ Common to all triggers:
   - All anchors that apply must be present. If any is missing the entry is held, and deletes are never sent while anchors are missing.
 - **Library resolution:**
   - Library lists are cached per target. The cache is refreshed periodically and whenever a lookup misses.
-  - A folder that matches no library is reported as *unmatched*, not silently dropped: it is not queued, it is counted per trigger, and the Scans page lists the most recent 100 with their trigger and path, so a missing path mapping can be found.
+  - A folder that matches no library is reported as *unmatched*, not silently dropped: it is not queued, it is counted per trigger, and the Scans page lists them with their trigger and path, 100 at a time, so a missing path mapping can be found. They are kept for 7 days and each has **Retry**, which resolves it again.
 - **Library root scans:** rejected by default, with a per-target setting to allow them.
 - **Batching:** used where the target supports it (Tofa scoped scan, Emby/Jellyfin), up to a maximum batch size. Plex gets one request per folder.
 - **Errors:**
@@ -99,8 +105,7 @@ Common to all triggers:
 - **Server delays shown in the UI:** Jellyfin and Emby apply their own monitor delay before acting on `Media/Updated` (measured 60 s and 90 s).
 - **Which wait wins:** an entry held for a missing anchor, or for a target that is disabled or backing off, shows that reason, and the "path must exist" hour does not run meanwhile.
 - **Deletes and adds in one entry:** it is sent as a delete if every event in it was a delete, otherwise as an add. The existence check applies only to adds; Plex empty trash runs if any event in it was a delete.
-- **When a path mapping or a library changes,** waiting entries are resolved again. An unmatched folder is kept for 7 days and can be retried from the Scans page once the mapping is fixed.
-- **Several triggers feeding one entry:** the longest minimum age among them applies.
+- **When a path mapping or a library changes,** waiting entries are resolved again.
 
 ## Targets
 | Target | Scan call | Extras |
@@ -112,7 +117,7 @@ Common to all triggers:
 | Another autoplow | Its generic webhook, with a trigger token. Never its API, so no admin key of another install is stored. | |
 
 ## UI and API extras
-- **Manual-add preview:** shows the rewrite per target, the library it resolves to, and whether the path exists.
+- **Manual-add preview:** shows the rewrite per target, the library it resolves to, and, for a same-system target, whether the path exists (a target elsewhere says "not checked").
 - **Bazarr compatibility:** `GET /stats` and `GET /api/config-template` (Bazarr's config generator).
 
 ## Open items
@@ -132,8 +137,8 @@ These are the notification types this module raises (the catalogue is in [notifi
 2. Two events for the same folder within the minimum age produce one delivery; an event arriving after a delivery was dispatched always produces another delivery (generation acknowledgement).
 3. A queued parent folder absorbs later child folders for the same target; a child queued first is replaced when its parent arrives.
 4. With a target offline, deliveries to other targets continue unaffected; the offline target's entries are retained across restart and delivered after it recovers (exponential backoff honouring `Retry-After`).
-5. Every queued entry exposes a wait reason (debounce, max-wait pending, anchor missing, path missing, target backoff, target disabled, ready) via the API.
-6. Delete events skip the existence check; with the optional 'path must exist' check enabled, add/change entries are held until the path exists (see AC16 for one that never does).
+5. Every queued entry exposes a wait reason (debounce, max-wait pending, anchor missing, path missing, waiting for the upload, waiting for the mount, target backoff, target disabled, ready) via the API.
+6. Delete events skip the existence check; with the optional 'path must exist' check enabled for a same-system target, add/change entries are held until the path exists (see AC16 for one that never does).
 7. With any applicable anchor missing, no delivery (and never a delete) is sent for the affected scope.
 8. `/mnt/Movies` never matches a library at `/mnt/Movies4K`; a folder contained by locations in two libraries is delivered to both.
 9. Jellyfin/Emby deliveries for one target are batched into one `Media/Updated` call per delivery cycle (bounded batch size); Plex receives one request per folder.
@@ -143,7 +148,7 @@ These are the notification types this module raises (the catalogue is in [notifi
 13. An entry failing for a path-level reason is dead-lettered after 5 attempts and can be retried or discarded (one at a time or all for a target); dead letters older than the pruning period are removed automatically. A target outage never dead-letters entries.
 14. Deleting a folder directly under a library root produces a scan of the removed path and never a root scan; for a server that cannot remove an item that way, the entry is reported as needing a library scan and nothing is sent.
 15. More than the threshold of waiting folders under one parent, for one target, are sent as one scan of the parent; a merge never yields a library root; with merging off each folder is sent.
-16. With "path must exist" on, an entry whose folder never appears is dead-lettered after the configured time with that reason; one whose folder appears is sent.
+16. With "path must exist" on for a same-system target, an entry whose folder never appears is dead-lettered after the configured time with that reason; one whose folder appears is sent.
 17. "Send now" on a waiting entry sends it before entries that were ready earlier, and still respects anchors, pacing and a disabled target.
 18. Above 10 000 unprocessed received events, a trigger request gets 503 with `Retry-After`; below it, requests are accepted again without a restart.
 19. A folder that matches no library is not queued and appears in the unmatched list with its trigger.
@@ -152,13 +157,13 @@ These are the notification types this module raises (the catalogue is in [notifi
 22. For a folder under an upload destination: a same-system target is scanned after the normal wait while the file is local; a target elsewhere is scanned only after the upload has finished and its propagation delay has passed; a same-system target whose file was already uploaded is scanned when the file is visible again or after the mount's delay, whichever is first. Each case shows its own wait reason.
 23. A file removed locally by Autoplow's own move produces no delete event from any trigger.
 24. While an anchor is missing, a walk reports no deletes under it, and the "path must exist" hour does not run for entries held by an anchor or by their target.
-25. An entry holding a delete and an add is sent as an add, with empty trash afterwards on Plex.
+25. An entry holding a delete and an add is sent as an add, with empty trash afterwards on Plex when that is enabled.
 26. A trigger body above 1 MB or naming more than 1000 paths is refused, and one trigger filling its own backlog share does not cause 503 for another.
 
 ## Boundaries
 - **Always:** follow `CONSTRAINTS.md`; validate external input at the boundary.
 - **Ask first:** Changing per-trigger auth semantics; Adding a new trigger or target type.
-- **Never:** Drop an accepted event; Scan a library root unless the target explicitly allows it; Use longest-match or raw string-prefix path logic.
+- **Never:** Drop an accepted event (one a trigger request was answered for; file events seen while nothing can be stored are covered under "Watching local folders"); Scan a library root unless the target explicitly allows it; Use longest-match or raw string-prefix path logic.
 
 ## Open questions
 - Default minimum age and maximum wait values (**decided 2026-10-27:** min 30 s, max 10 min; per trigger/target configurable).

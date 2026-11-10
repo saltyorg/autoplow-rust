@@ -15,7 +15,7 @@ Autoplow is a single daemon that keeps a Saltbox media stack consistent and movi
 
 **v1 success** (the user story behind each item):
 1. **Replaces autoscan/autopulse.** Every trigger and target they support for Saltbox users works. That includes Arr webhooks, the legacy endpoints, Bazarr, the local filesystem and Drive, delivering to Plex, Jellyfin, Emby, Tdarr and another Autoplow, with no lost scans across restarts.
-2. **Replaces cloudplow.** Local media is uploaded to rclone remotes with the readiness, throttling and downloader-pausing behaviour in [upload.md](upload.md), [throttle.md](throttle.md) and [downloaders.md](downloaders.md). Download clients can also be rate-limited from stream activity on their own, without using uploads.
+2. **Replaces cloudplow.** Local media is uploaded to rclone remotes, or moved to another local folder, with the readiness, throttling and downloader-pausing behaviour in [upload.md](upload.md), [throttle.md](throttle.md) and [downloaders.md](downloaders.md). Download clients can also be rate-limited from stream activity on their own, without using uploads.
 3. **Replaces matcharr and Plex-Auto-Languages.** Library parity and track preferences cover their functionality ([parity.md](parity.md), [track-preferences.md](track-preferences.md)).
 
 **Non-goals for v1:**

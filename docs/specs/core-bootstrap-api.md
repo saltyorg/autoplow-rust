@@ -1,6 +1,6 @@
 # Spec: bootstrap file and REST API (v1)
 
-**Module:** `core` · **Depends on:** — · **Decisions:** ADR-0007 · **Status:** approved 2026-10-27
+**Module:** `core` · **Depends on:** — · **Decisions:** ADR-0007, ADR-0019 · **Status:** approved 2026-10-27
 
 ## Objective
 Configure Autoplow once from Ansible and manage it afterwards through a complete, idempotent REST API that the UI also uses.
@@ -71,6 +71,7 @@ triggers:
 destinations:
   - name: media
     local_path: /mnt/local/Media/
+    scan_path: /mnt/unionfs/Media/     # the same folder as scans and media servers see it
     remotes: [{ remote: "google:", path: /Media/ }]
 downloaders:
   - name: sabnzbd
@@ -92,7 +93,8 @@ The detailed schema will be generated from the same Rust types the API uses, as 
   - Addresses given to other systems (an Arr's webhook URL) use the ID, so a rename never breaks them.
 - **An Arr is one resource.** An `arrs` entry carries its connection and its trigger settings: token, minimum age, filters, path rules, managed connection. `triggers` holds every other trigger except Google Drive monitors, which live under `gdrive/monitors`. The UI lists all three on the Triggers page. Deleting an Arr removes all of it, including its managed webhook.
 - **Concurrent edits:** each resource carries a version (`ETag`). A change sent with an older version (`If-Match`) is refused with 412, and the UI says the item changed elsewhere and offers to reload it. A change sent without a version is applied.
-- **Deleting something in use** is refused with 409 and the list of what uses it (for example the triggers, anchors and destinations that name a target). Nothing is removed as a side effect. Work still queued for the item is dropped only when the delete is confirmed.
+- **Deleting something in use** is refused with 409 and the list of what uses it (for example the triggers, anchors and destinations that name a target). Nothing else is removed as a side effect.
+- **Deleting something that still has work, or cannot be reached:** the 409 lists what would be lost (queued work, parity findings and settings for that Arr or target); repeating the delete with `?confirm=true` goes ahead and removes those with it. For an Arr that is down, the answer also says its managed connection may still exist in the Arr.
 - **`settings`** is a single resource with one group per area. Every key is typed and validated, and every value a Settings page or an options card shows is a key here:
   - **general:** callback base URL, Autoplow's own browser address (for links in notifications), trusted proxies, time zone, the update check switch, shared trigger credentials, the Arr reconcile interval, retention periods, backup schedule, log levels and log-file retention.
   - **scan:** minimum age and maximum wait defaults, dead-letter attempts.
@@ -102,20 +104,18 @@ The detailed schema will be generated from the same Rust types the API uses, as 
   - **throttle:** what counts as a stream, the settling time, "no new uploads above N streams", and per client "pause above N streams".
   - **parity:** when to check, automatic fixes per server and finding type, the safety limit, match language, excluded pairs and finding types, retention.
   - **track-preferences:** per Plex target whether it is on and for which libraries, the ignore label, ignored file patterns, the trigger switches, the sweep time, the default scope.
-- **Deleting something that cannot be reached or still has work:** the 409 lists what would be lost; repeating the delete with `?confirm=true` goes ahead. For an Arr that is down, the delete goes ahead and says its managed connection may still exist in the Arr. Parity findings and settings for a deleted Arr or target are removed with it.
-- **A long job cut off by a restart** is reported as interrupted, unless the job is one that resumes by itself (a Drive snapshot), which continues.
 
 ## Routes
 | Route | For | Authentication |
 |---|---|---|
-| `/api/v1/…` | the UI, scripts | session cookie with CSRF, or `Authorization: Bearer <api key>` |
+| `/api/v1/…` | the UI, scripts | session cookie with CSRF, or `Authorization: Bearer <api key>`. A read-only key may only `GET`, and not the admin-only reads marked below. Signing in, setup and the OpenAPI document need neither. |
 | `/api/v1/events` | live updates | as above; a read-only key is enough |
 | `/api/v1/gdrive/oauth/callback` | Google's redirect | the signed `state` value |
 | `/triggers/{id}` | webhooks from Arrs and other callers | that trigger's own token |
 | `/triggers/{sonarr,radarr,lidarr,manual}`, `/triggers/a-train/{drive}`, `/triggers/bazarr`, `/stats`, `/api/config-template` | callers written for autoscan, A-Train and Bazarr | the matching trigger's credentials |
 | `/health` | service checks | none; reveals only ok or not ok |
-| `/metrics` | Prometheus | a read-only API key |
-| `/setup` | first-start setup page | the setup token; absent once an admin exists or while a bootstrap file is present |
+| `/metrics` | Prometheus | an API key of any scope |
+| `/api/v1/setup` | first-start setup (the page is part of the UI) | the setup token; absent once an admin exists or while a bootstrap file is present |
 | everything else | the UI's own files | none |
 
 No route under `/triggers` ever depends on a browser sign-in. A request under `/api/v1` carries a session or an API key.
@@ -135,13 +135,13 @@ No route under `/triggers` ever depends on a browser sign-in. A request under `/
 - **Long jobs:** an operation that can take more than a few seconds (a Drive snapshot rebuild, a full parity check, a backup) returns 202 with a job.
   - `GET /jobs/{id}` gives its state, progress and result. Progress is also on the event stream.
   - A job keeps running when the browser closes. Starting the same job while one is running is refused with 409 and the running job.
-  - A job cut off by a restart is reported as interrupted, not as failed or finished.
+  - A job cut off by a restart is reported as interrupted, not as failed or finished. A job that resumes by itself (a Drive snapshot) continues instead.
 - **Apply:** `POST /api/v1/apply?mode=seed|upsert&dry_run=true|false`, with the bootstrap schema as the body.
   - It returns a per-resource result: `created | updated | unchanged | skipped | error`, plus a diff.
   - `upsert` never deletes. Deletion is always explicit.
 - **Operations:**
   - `POST /scans` (manual scan, with a preview: `dry_run=true` returns the rewrite and library resolution for each target)
-  - `GET /queues/{target}`; `GET /queues/{target}/delivered` (history); `GET /scans/unmatched`
+  - `GET /queues/{target}`; `GET /queues/{target}/delivered` (history); `GET /scans/unmatched`; `POST /scans/unmatched/{id}/retry`
   - `POST /queues/{target}/{id}/send` (send now); `POST /queues/{target}/{id}/retry`
   - `GET /uploads` (filter by state: waiting, running, failed, finished)
   - `POST /uploads/now` (all, or `?destination=`); `POST /uploads/{id}/retry|stop`; `DELETE /uploads/{id}` (discard a failed file)
@@ -151,10 +151,10 @@ No route under `/triggers` ever depends on a browser sign-in. A request under `/
   - `GET /parity/findings`; `GET /parity/findings/{id}` (both sides, history and what was done)
   - `POST /parity/findings/{id}/fix|skip|ignore|unignore`
   - `POST /arrs/{name}/reconcile|unmanage`; `POST /arrs/test` (a connection not saved yet) and `POST /arrs/{name}/test`
-  - `GET /arrs/{name}/mapping-suggestions`; `GET /arrs/{name}/webhooks` (older ones); `POST /arrs/{name}/webhooks/{id}/disable`; `DELETE /arrs/{name}/webhooks/{id}`
+  - `GET /arrs/{name}/mapping-suggestions` (admin only); `GET /arrs/{name}/webhooks` (older ones); `POST /arrs/{name}/webhooks/{id}/disable`; `DELETE /arrs/{name}/webhooks/{id}`
   - `POST /targets/test` and `POST /targets/{name}/test`; `GET /targets/{name}/libraries`
-  - `POST /targets/plex-sign-in` (start) and `GET /targets/plex-sign-in/{id}` (result)
-  - `GET /browse/files?path=` (the filesystem browser); `GET /browse/targets/{name}?path=`; `GET /browse/gdrive/{account}?drive=&folder=`
+  - `POST /targets/plex-sign-in` (start) and `GET /targets/plex-sign-in/{id}` (result; admin only)
+  - Admin only: `GET /browse/files?path=` (the filesystem browser); `GET /browse/targets/{name}?path=`; `GET /browse/gdrive/{account}?drive=&folder=`
   - `POST /backups` (take one now); `GET /backups`
   - `POST /session` (sign in); `DELETE /session` (sign out); `PUT /session/password`; `POST /setup` (first start only)
   - `POST /api-keys/{name}/regenerate`
@@ -164,12 +164,12 @@ No route under `/triggers` ever depends on a browser sign-in. A request under `/
   - `POST /gdrive/monitors/{name}/poll|pause|resume|rebuild`; `GET /gdrive/monitors/{name}/changes|snapshot`
   - `GET /notifications/undelivered`; `POST /notifications/undelivered/{id}/resend`; `DELETE /notifications/undelivered[/{id}]` (all, or with `?channel=` one channel's)
   - `POST /notifications/{name}/test`
-  - `POST /gdrive/accounts/connect` (start) and `GET /gdrive/accounts/connect/{id}` (result); `GET /gdrive/accounts/{name}/drives`; `GET /gdrive/redirect-check`
+  - `POST /gdrive/accounts/connect` (start) and `GET /gdrive/accounts/connect/{id}` (result; admin only); `GET /gdrive/accounts/{name}/drives`; `GET /gdrive/redirect-check`
   - `GET /rclone` (state and version); `POST /rclone/reload`
   - `POST /downloaders/{name}/test`
   - `GET /throttle` (sessions and each limiter's current limit); `PUT /throttle/override` and `DELETE /throttle/override`
   - `GET /track-preferences/users`; `PATCH /track-preferences/users/{id}` (opt out, scope override); `DELETE /track-preferences/users/{id}/preferences` (clear all)
-  - `GET /track-preferences/users/{id}/preferences`; `PUT` and `DELETE /track-preferences/users/{id}/preferences/{show}`
+  - `GET /track-preferences/users/{id}/preferences`; `PUT` and `DELETE /track-preferences/users/{id}/preferences/{show}[/{season}]`
   - `GET /track-preferences/excluded-shows`; `PUT` and `DELETE /track-preferences/excluded-shows/{show}`
   - `GET /track-preferences/history`; `POST /track-preferences/sweeps` (a long job)
 - **Events:** `GET /api/v1/events` (SSE) for the UI's live updates. Each event has a type, a time, the resource it is about and a typed payload; the types are part of the OpenAPI document.
@@ -190,7 +190,7 @@ No route under `/triggers` ever depends on a browser sign-in. A request under `/
 11. A list of 10 000 rows is returned in pages that never skip or repeat a row while rows are being added.
 12. A long job returns 202 at once, reports progress, survives the client disconnecting, and a second start of the same job gets 409.
 13. Every route in the routes table accepts exactly the authentication listed for it and rejects the others (matrix test).
-14. A delete that would lose queued work, or whose Arr is unreachable, answers 409 with what would be lost, and goes ahead when repeated with `confirm=true`.
+14. A delete that would lose queued work, findings or settings, or whose Arr is unreachable, answers 409 with what would be lost, and goes ahead when repeated with `confirm=true`.
 
 ## Boundaries
 - **Always:** follow `CONSTRAINTS.md`; validate external input at the boundary.
