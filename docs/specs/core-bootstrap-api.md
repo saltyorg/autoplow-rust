@@ -74,7 +74,7 @@ The detailed schema will be generated from the same Go types the API uses, as a 
   - `Authorization: Bearer <api key>` (scoped: admin, read-only).
   - The UI uses session cookies plus CSRF protection.
 - **Resources:**
-  - `targets`, `arrs`, `triggers`, `destinations`, `remotes` (read-only, from `rclone.conf`), `notifications`, `anchors`, `rewrite-sets`, `gdrive/accounts`, `gdrive/monitors`, `users`, `api-keys`, `settings`
+  - `targets`, `arrs`, `triggers`, `destinations`, `downloaders`, `remotes` (read-only, from `rclone.conf`), `notifications`, `anchors`, `rewrite-sets`, `gdrive/accounts`, `gdrive/monitors`, `users`, `api-keys`, `settings`
   - Each supports `GET` (list), `GET /{name}`, `PUT /{name}` (idempotent upsert) and `DELETE /{name}`.
   - `PATCH` uses JSON merge patch.
 - **Apply:** `POST /api/v1/apply?mode=seed|upsert&dry_run=true|false`, with the bootstrap schema as the body.

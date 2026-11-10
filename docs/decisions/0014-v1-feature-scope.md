@@ -15,7 +15,7 @@ Autoplow merges ideas from autoscan, autopulse, cloudplow, matcharr and Plex-Aut
   - Triggers: Sonarr, Radarr, Lidarr, Whisparr, Bazarr, generic, legacy endpoints, local filesystem, Google Drive.
   - Targets: Plex, Jellyfin, Emby, Tdarr, another Autoplow, Tofa.
 - **Per-file uploads.**
-- **Stream-aware throttling.**
+- **Stream-aware throttling.** Widened by [ADR-0017](0017-download-clients-module-and-stream-aware-limits.md) to download clients' speed limits.
 - **Library parity** (formerly matcharr).
 - **Track preferences** (formerly Plex-Auto-Languages, Plex only).
 - **Notifications:** Discord, Apprise, webhook.

@@ -4,7 +4,7 @@ Autoplow is a single Rust daemon for [Saltbox](https://saltbox.dev) media server
 
 - **Scan triggers.** Sonarr/Radarr/Lidarr/Whisparr/Bazarr webhooks (managed automatically), local filesystem watching and Google Drive changes feed durable, per-target scan queues for Plex, Jellyfin, Emby, Tdarr, Tofa and other Autoplow instances.
 - **Uploads.** Per-file uploads to rclone remotes, with readiness checks: age, stability, open-file detection and hardlink awareness. They run through a supervised `rclone rcd`.
-- **Stream-aware throttling.** Upload bandwidth adapts to active media streams.
+- **Stream-aware throttling.** Upload bandwidth and download clients' speed limits adapt to active media streams.
 - **Library parity.** Compares what the Arrs manage with what each media server holds: wrong matches, missing or unmanaged items, file differences.
 - **Track preferences.** Remembers each Plex user's audio and subtitle choices per show.
 - **Notifications.** Discord, Apprise and generic webhooks.

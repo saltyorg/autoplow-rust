@@ -28,7 +28,9 @@ These come directly from the failures we saw in earlier projects.
   ├─ local FS (inotify | walk | both)     │             ├──▶ Upload pipeline ─▶ rclone transport (supervised rclone rcd, unix socket)
   └─ Google Drive (OAuth, Changes API)    ┘             └──▶ matcharr hints (optional, per item)
 
- Session sources (Plex/Emby/Jellyfin websockets, Tofa polling) ─▶ Session registry ─▶ Throttle controller ─▶ core/bwlimit
+ Session sources (Plex/Emby/Jellyfin websockets, Tofa polling) ─▶ Session registry ─▶ Throttle controller ─┬▶ core/bwlimit (rclone)
+                                                                                                           └▶ Downloaders (speed limits)
+ Upload pipeline ─▶ Downloaders (pause) ─▶ SABnzbd / NZBGet / qBittorrent
  Plex notifications ─▶ PAL (one queue per show/user) ─▶ Plex parts API
  Arr connection reconciler ─▶ Arr APIs (keeps our webhook correct)
  Schedulers: matcharr sweeps, library-cache refresh, retention cleanup
@@ -104,8 +106,9 @@ These come directly from the failures we saw in earlier projects.
 
 ### Throttle
 - **Session registry:** fed by push sources (Plex, Emby and Jellyfin websockets) and by pollers (Tofa). Each session source is counted exactly once.
-- **Policy:** the user picks a mode: tiers by stream count, a fixed reservation per stream, or a reservation by bitrate (with bitrates clamped). Paused streams are excluded, and LAN streams optionally. There is no time schedule. See [specs/throttle.md](specs/throttle.md).
-- **Effect:** the controller sets the process-wide `core/bwlimit`. It can also pause new upload batches below a set speed.
+- **Limiters:** rclone's upload bandwidth, and each download client's download and upload speed. Each is switched on and configured on its own; there is no shared budget ([ADR-0017](decisions/0017-download-clients-module-and-stream-aware-limits.md)).
+- **Policy:** each limiter has a mode: tiers by stream count, a fixed reservation per stream, or (rclone only) a reservation by bitrate (with bitrates clamped). Paused streams are excluded, and LAN streams optionally. There is no time schedule. See [specs/throttle.md](specs/throttle.md).
+- **Effect:** the controller sets rclone's process-wide `core/bwlimit` and hands client limits to the `downloaders` module, which owns each client's pause state and limits. It can also pause new upload batches below a set speed.
 
 ### Local filesystem triggers
 - Each watched path has a mode:

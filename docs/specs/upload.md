@@ -1,6 +1,6 @@
 # Spec: the upload pipeline (v1)
 
-**Module:** `upload` · **Depends on:** core, rclone, scan, notifications · **Decisions:** ADR-0003, ADR-0011 · **Status:** approved 2026-10-27
+**Module:** `upload` · **Depends on:** core, rclone, scan, notifications, downloaders · **Decisions:** ADR-0003, ADR-0011 · **Status:** approved 2026-10-27
 
 ## Objective
 Move finished local media to the user's rclone remotes per file, only once it is ready (age, stability, not being written, scanned), without stalling on seeding torrents, and without ever removing a source that was not confirmed uploaded.
@@ -64,15 +64,12 @@ This consolidates the upload decisions in the ADRs in [../decisions/](../decisio
   - **Hold new uploads:** a toggle. While on, no new transfer starts; transfers in flight finish. The hold is persisted and survives a restart.
   - **Stop:** for one transfer or all of them. Calls rclone `job/stop`; the source stays intact and the file is re-queued. A re-queued file restarts from the beginning unless the backend resumes uploads.
 
-## Downloaders
-- **Supported:** SABnzbd and NZBGet.
-- **Conditions,** set per downloader:
-  - **while uploads are active:** resume after the queue has been idle for a grace period
+## Pausing download clients
+The clients themselves, and the guarantee that a paused client is always resumed, belong to [the downloaders spec](downloaders.md) *(moved 2026-11-10)*. This module only decides when to ask for a pause.
+- **Applies to:** clients that can be paused (SABnzbd and NZBGet in v1).
+- **Conditions,** set per client:
+  - **while uploads are active:** the pause ends after the queue has been idle for a grace period
   - **disk-space guard:** pause below a free-space threshold
-- **Resume is guaranteed:**
-  - on error
-  - on shutdown
-  - by a periodic reconcile, so a crash cannot leave clients paused (cloudplow had that bug)
 
 ## Not in v1
 - Server-side mover.
@@ -89,14 +86,14 @@ This consolidates the upload decisions in the ADRs in [../decisions/](../decisio
 7. A remote returning quota/upload-limit errors is put on cooldown and the destination's next remote is used until the cooldown ends.
 8. Outside a schedule window no new transfer starts; transfers in flight finish.
 9. Hardlinked files follow the destination's policy (upload, reported as 'space not reclaimed', or defer while `nlink > 1`).
-10. SABnzbd/NZBGet paused by Autoplow are always resumed: after uploads go idle (grace period), on error, on shutdown, and by periodic reconcile after a crash.
+10. A pausable download client is asked to pause while uploads are active and when free space is below its threshold, and the request ends after the grace period or when space recovers. (Resume guarantees: downloaders AC2, AC6.)
 11. Sustained 10 TB/day across remotes completes without Autoplow exceeding its resource budget (project.md).
 12. With "hold new uploads" on, no new transfer starts, transfers in flight complete, and the hold is still on after a daemon restart.
 13. Stopping a transfer (one or all) leaves the source intact and re-queues the file; nothing is left at the destination.
 
 ## Boundaries
 - **Always:** follow `CONSTRAINTS.md`; validate external input at the boundary.
-- **Ask first:** Touching (normalising) local file mtimes beyond the opt-in rule; Supporting additional downloaders.
+- **Ask first:** Touching (normalising) local file mtimes beyond the opt-in rule.
 - **Never:** Delete a source without a confirmed successful transfer; Touch a hardlinked file's mtime; Write to the user's rclone.conf.
 
 ## Open questions

@@ -61,11 +61,12 @@ The detailed tasks, with acceptance criteria and verification, are in [todo.md](
 | 4 | `scan` | Triggers, per-target durable queues, delivery, anchors, verification, filesystem trigger, load test |
 | 5 | `rclone` | Supervised `rcd` and RC client, crypt `decode` |
 | 6 | `gdrive` | OAuth accounts; snapshot plus Changes API monitors; crypt remotes, change log, controls, snapshot browser |
-| 7 | `upload` | Per-file queue, readiness, open-file detection, failover, schedules, downloaders, soak test |
-| 8 | `throttle` | Session registry and bandwidth policies |
-| 9 | `parity` | Engine, fixes, review UI |
-| 10 | `track-preferences` | Matching, per-user preferences, UI |
-| 11 | Release | Container, release pipeline, replacement checklists |
+| 7 | `downloaders` | SABnzbd, NZBGet and qBittorrent clients; one owner for pause state and speed limits |
+| 8 | `upload` | Per-file queue, readiness, open-file detection, failover, schedules, pausing download clients, soak test |
+| 9 | `throttle` | Session registry; limiters for rclone and download clients |
+| 10 | `parity` | Engine, fixes, review UI |
+| 11 | `track-preferences` | Matching, per-user preferences, UI |
+| 12 | Release | Container, release pipeline, replacement checklists |
 
 Phases follow the approved build order in `docs/specs/README.md`. Every task traces to numbered acceptance criteria in its module spec.
 
@@ -73,7 +74,7 @@ A checkpoint after each phase requires: tests green, build clean, a demo of the 
 
 ## Testing strategy
 - **Unit tests** use `tokio::time::pause` plus an injected `Clock` trait for wall-clock (`SystemTime`) logic, covering every timer-based behaviour.
-- **Fake HTTP servers** stand in for Plex, Jellyfin, Emby, Tofa, the Arrs, SABnzbd and NZBGet.
+- **Fake HTTP servers** stand in for Plex, Jellyfin, Emby, Tofa, the Arrs, SABnzbd, NZBGet and qBittorrent.
 - **Pipeline tests** run against real SQLite.
 - **The rclone transport is tested against a real `rclone rcd`** with the local and crypt backends, including child crash and restart.
 - **Live-server tests** sit behind a cargo feature or ignored tests (`live`) and read endpoints and credentials only from environment variables. They run one server at a time, under `systemd-run` memory and CPU caps, with unbuffered progress output.

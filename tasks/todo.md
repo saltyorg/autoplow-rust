@@ -434,9 +434,42 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 ### Checkpoint: gdrive
 - [ ] A real Drive account connects from the UI, and a change produces a scan for the mapped folder, including one under a crypt remote; the change log shows it; human review.
 
-## Phase 7: `upload`
+## Phase 7: `downloaders`
 
-### Task 7.1: Destinations and per-file queue
+### Task 7.1: Verify the client APIs
+- [ ] **Spike:** against a pinned version of SABnzbd, NZBGet and qBittorrent, verify pause and resume, setting and reading the download and upload limits, their units, and whether a scheduler or alternative-speed mode can be detected. Record each as a platform note.
+- **V:** the platform notes exist, with versions and method.
+- **Dep:** none.
+- **Files:** `docs/platform-notes/`.
+- **Size:** S.
+
+### Task 7.2: Clients and the desired-state owner
+- [ ] **AC (downloaders AC1–AC3, AC5–AC8):**
+  - SABnzbd, NZBGet and qBittorrent clients behind one trait.
+  - Desired state per client from pause reasons and limits.
+  - Apply at once; reconcile every minute.
+  - Idle limit applied on shutdown, removal and switching limits off.
+  - Overrides reported, never changed.
+- **V:** fake clients: two pause reasons, manual change put back, simulated crash, unreachable client.
+- **Dep:** 7.1, 0.6, 1.1.
+- **Files:** `crates/downloaders/src/{clients/*,state,reconcile}.rs`.
+- **Size:** M.
+
+### Task 7.3: Downloaders API and UI
+- [ ] **AC (downloaders AC1, AC4):**
+  - `downloaders` resource: add, test, edit, remove.
+  - Settings › Downloaders with a dialog per client.
+- **V:** Playwright plus axe.
+- **Dep:** 7.2, 0.9.
+- **Files:** `crates/api/src/downloaders.rs`, `crates/ui/src/pages/settings/downloaders.rs`.
+- **Size:** S.
+
+### Checkpoint: downloaders
+- [ ] A real SABnzbd and a real qBittorrent are paused, limited and put back, including after `kill -9` of Autoplow; human review.
+
+## Phase 8: `upload`
+
+### Task 8.1: Destinations and per-file queue
 - [ ] **AC (upload AC4–AC6):**
   - Queue keyed by identity (dev, ino) plus path.
   - Tracking by job and group.
@@ -447,7 +480,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Files:** `crates/upload/src/{destinations,queue}.rs`.
 - **Size:** M.
 
-### Task 7.2: Readiness: age, stability, mtime hygiene, hardlinks, scanned-first
+### Task 8.2: Readiness: age, stability, mtime hygiene, hardlinks, scanned-first
 - [ ] **AC (upload AC1, AC9):**
   - First-seen age (2 min) that restarts on an mtime change.
   - Two stability checks 30 s apart.
@@ -455,11 +488,11 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
   - Hardlink policy.
   - Scanned-first gate.
 - **V:** paused-clock and filesystem tests.
-- **Dep:** 7.1, 4.1.
+- **Dep:** 8.1, 4.1.
 - **Files:** `crates/upload/src/readiness/*.rs`.
 - **Size:** M.
 
-### Task 7.3: Open-file detection (optional capability)
+### Task 8.3: Open-file detection (optional capability)
 - [ ] **AC (upload AC2, AC3):**
   - Capability detection.
   - `/proc` fd scan by dev+inode for local and mergerfs identities.
@@ -468,41 +501,40 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
   - Media-server wait option.
   - Degraded-mode notice.
 - **V:** helper processes holding read, write and flock handles; cgroup fixtures.
-- **Dep:** 7.2.
+- **Dep:** 8.2.
 - **Files:** `crates/upload/src/openfiles/*.rs`.
 - **Size:** M.
 
-### Task 7.4: Concurrency, failover, schedules
+### Task 8.4: Concurrency, failover, schedules
 - [ ] **AC (upload AC7, AC8):**
   - Global cap plus per-remote caps.
   - Remote-health cooldown.
   - Schedule windows that let transfers in flight finish.
 - **V:** fake-transport tests.
-- **Dep:** 7.1.
+- **Dep:** 8.1.
 - **Files:** `crates/upload/src/{scheduler,health}.rs`.
 - **Size:** M.
 
-### Task 7.5: Downloader pausing
+### Task 8.5: Pausing download clients
 - [ ] **AC (upload AC10):**
-  - SABnzbd and NZBGet.
-  - "While uploading" with grace, and a disk guard.
-  - Guaranteed resume, including after a crash.
-- **V:** fakes plus a simulated crash.
-- **Dep:** 7.4.
-- **Files:** `crates/upload/src/downloaders/*.rs`.
-- **Size:** S.
+  - Pause requests to `downloaders`: "while uploading" with grace, and the free-space guard.
+  - No client calls from `upload`.
+- **V:** fake `downloaders` owner: request raised and ended at the right times.
+- **Dep:** 8.4, 7.2.
+- **Files:** `crates/upload/src/pausing.rs`.
+- **Size:** XS.
 
-### Task 7.6: Upload UI
+### Task 8.6: Upload UI
 - [ ] **AC:** destinations, queue with readiness reasons, live transfers, history, remote health.
 - **V:** Playwright plus axe; WASM budget.
-- **Dep:** 7.1–7.5, 0.9.
+- **Dep:** 8.1–8.5, 0.9.
 - **Files:** `crates/ui/src/pages/uploads/*.rs`.
 - **Size:** M.
 
-### Task 7.7: Upload soak and load test
+### Task 8.7: Upload soak and load test
 - [ ] **AC (upload AC11; project scale):** sustained throughput equivalent to 10 TB per day against a local/crypt test remote, within the resource budget.
 - **V:** capped soak; results summarised.
-- **Dep:** 7.4.
+- **Dep:** 8.4.
 - **Files:** `crates/upload/tests/soak.rs`.
 - **Size:** S.
 
@@ -511,9 +543,9 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - [ ] Hardlinked and open files handled.
 - [ ] Human review.
 
-## Phase 8: `throttle`
+## Phase 9: `throttle`
 
-### Task 8.1: Session registry
+### Task 9.1: Session registry
 - [ ] **AC (throttle AC1, AC2):**
   - Plex, Jellyfin and Emby websockets, plus Tofa polling.
   - Each server counted once.
@@ -524,22 +556,40 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Files:** `crates/throttle/src/sessions.rs`.
 - **Size:** M.
 
-### Task 8.2: Policy modes and effect
+### Task 9.2: Policy modes and the rclone limiter
 - [ ] **AC (throttle AC3–AC6):**
   - Tiers, per stream, by bitrate (cap 200 Mbps plus media bitrate).
   - Limit applied within 5 s.
   - Optional "no new transfers above N streams".
 - **V:** table tests including the 10 Gbps outlier; integration test with `rcd`.
-- **Dep:** 8.1, 5.1.
+- **Dep:** 9.1, 5.1.
 - **Files:** `crates/throttle/src/policy.rs`.
 - **Size:** S.
 
+### Task 9.3: Download-client limiters
+- [ ] **AC (throttle AC7–AC10, downloaders AC4):**
+  - One limiter per client and direction, each with its own mode.
+  - Works with no upload destinations.
+  - By-bitrate rejected for client limiters.
+  - An unreachable client does not delay other limiters.
+- **V:** table tests per limiter; fake clients; a run with rclone disabled.
+- **Dep:** 9.2, 7.2.
+- **Files:** `crates/throttle/src/limiters.rs`.
+- **Size:** S.
+
+### Task 9.4: Throttle UI
+- [ ] **AC:** every limiter with its current limit and mode; sessions; options.
+- **V:** Playwright plus axe.
+- **Dep:** 9.3, 0.9.
+- **Files:** `crates/ui/src/pages/throttle.rs`.
+- **Size:** S.
+
 ### Checkpoint: throttle
-- [ ] A live Plex stream changes the limit on a running test transfer within 5 s; human review.
+- [ ] A live Plex stream changes the limit on a running test transfer and on a real download client within 5 s; human review.
 
-## Phase 9: `parity`
+## Phase 10: `parity`
 
-### Task 9.1: Engine
+### Task 10.1: Engine
 - [ ] **AC (parity AC1, AC2, AC5):**
   - Phased fetch and path-keyed join.
   - Findings: mismatches, gaps both ways, file mismatches, merged items.
@@ -551,7 +601,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Files:** `crates/parity/src/{fetch,compare,findings}.rs`.
 - **Size:** M.
 
-### Task 9.2: Fixes and triggers
+### Task 10.2: Fixes and triggers
 - [ ] **AC (parity AC3, AC4, AC6):**
   - Review-first; auto-fix opt-in.
   - Rate-limited fixes, verified by read-back, audited.
@@ -559,30 +609,30 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
   - Merged items: off, notify or auto-split.
   - Schedule, on-demand and after-import triggers, each switchable.
 - **V:** fakes; `live` dry run.
-- **Dep:** 9.1, 1.2.
+- **Dep:** 10.1, 1.2.
 - **Files:** `crates/parity/src/{fix,triggers}.rs`.
 - **Size:** M.
 
-### Task 9.3: Parity UI
+### Task 10.3: Parity UI
 - [ ] **AC:** runs, findings (fix, skip, ignore), filters, audit log.
 - **V:** Playwright plus axe.
-- **Dep:** 9.2, 0.9.
+- **Dep:** 10.2, 0.9.
 - **Files:** `crates/ui/src/pages/parity.rs`.
 - **Size:** M.
 
 ### Checkpoint: parity
 - [ ] A live dry run against the test libraries lists findings with no writes; an approved fix verifies by read-back; human review.
 
-## Phase 10: `track-preferences`
+## Phase 11: `track-preferences`
 
-### Task 10.1: Matching algorithm
+### Task 11.1: Matching algorithm
 - [ ] **AC (track-preferences AC3):** PAL's scoring plus forced/HI/VI semantics and tie-break, with the fixed cases.
 - **V:** port of PAL's tests plus new cases.
 - **Dep:** none (pure).
 - **Files:** `crates/track-preferences/src/matching.rs`.
 - **Size:** S.
 
-### Task 10.2: Users, preferences, triggers, apply
+### Task 11.2: Users, preferences, triggers, apply
 - [ ] **AC (track-preferences AC1, AC2, AC4, AC5):**
   - Shared-server tokens, never logged.
   - Preferences per (user, show).
@@ -591,23 +641,23 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
   - Verified writes.
   - Opt-out per user.
 - **V:** fake Plex; `live` test on a test library.
-- **Dep:** 10.1, 2.2.
+- **Dep:** 11.1, 2.2.
 - **Files:** `crates/track-preferences/src/{users,prefs,apply}.rs`.
 - **Size:** M.
 
-### Task 10.3: Track preferences UI
+### Task 11.3: Track preferences UI
 - [ ] **AC:** users, preferences (edit and clear), scope settings, history.
 - **V:** Playwright plus axe.
-- **Dep:** 10.2, 0.9.
+- **Dep:** 11.2, 0.9.
 - **Files:** `crates/ui/src/pages/tracks.rs`.
 - **Size:** S.
 
 ### Checkpoint: track-preferences
 - [ ] A track change during live Plex playback propagates to the next episodes for that user only; human review.
 
-## Phase 11: Release
+## Phase 12: Release
 
-### Task 11.1: Container image and release pipeline
+### Task 12.1: Container image and release pipeline
 - [ ] **AC:**
   - Static musl binaries for x86_64 and aarch64.
   - Image with a pinned rclone and `RCLONE_CONFIG` set.
@@ -619,12 +669,12 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Files:** `Dockerfile`, `.github/workflows/release.yml`.
 - **Size:** S.
 
-### Task 11.2: Replacement checklists and Saltbox integration notes
+### Task 12.2: Replacement checklists and Saltbox integration notes
 - [ ] **AC (project success criterion 3):**
   - A written checklist per replaced tool (autoscan/autopulse, cloudplow, matcharr, Plex-Auto-Languages), each verified by the live suite.
   - Example bootstrap for the Saltbox role.
 - **V:** walkthrough on a test Saltbox install.
-- **Dep:** 11.1.
+- **Dep:** 12.1.
 - **Files:** `docs/guides/*.md`.
 - **Size:** S.
 

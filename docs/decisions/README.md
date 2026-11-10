@@ -17,6 +17,7 @@ Format: Status, Date, Context, Decision, Alternatives Considered, Consequences. 
 | [0011](0011-upload-readiness-model.md) | Per-file upload readiness model | Accepted |
 | [0012](0012-managed-arr-connections.md) | Managed Arr webhook connections | Accepted |
 | [0013](0013-google-drive-via-user-oauth-client.md) | Google Drive with the user's own OAuth client | Accepted |
-| [0014](0014-v1-feature-scope.md) | v1 feature scope | Accepted |
+| [0014](0014-v1-feature-scope.md) | v1 feature scope | Accepted (amended by 0017) |
 | [0015](0015-public-documentation-rules.md) | Public documentation rules | Accepted |
 | [0016](0016-console-ui-direction.md) | Console visual direction and UI rules | Accepted |
+| [0017](0017-download-clients-module-and-stream-aware-limits.md) | Download clients as their own module, limited by stream activity | Accepted |

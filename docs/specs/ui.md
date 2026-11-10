@@ -52,7 +52,7 @@ Module specs say *what* a page shows. This spec says *how* every page looks and 
   - List pages (Triggers, Targets, Notifications) and Settings cap their content at 1040 px, so a few columns don't spread across a wide screen.
   - Data-heavy pages (Dashboard, Health, Scans, Uploads, Throttle, Library parity, the Google Drive trigger) use the full width.
 - **Settings:**
-  - Sections, in order: General, Anchors, rclone, Uploads, Library parity, Google Drive, API keys, Appearance, About.
+  - Sections, in order: General, Anchors, rclone, Uploads, Downloaders, Library parity, Google Drive, API keys, Appearance, About.
   - The section menu has a fixed width of 200 px, and the section content sits beside it.
   - **Settings save as you change them.** Each card shows when it was last saved; there is no Save button. A change that needs confirming (a password) goes through a dialog, which keeps its own Save.
 - **Small screens:**
