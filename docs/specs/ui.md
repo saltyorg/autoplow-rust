@@ -111,8 +111,8 @@ Every page and dialog in v1, the module that owns it, what it shows and does, an
 | **Google Drive trigger** | gdrive | State, Poll, Pause; settings summary; changes with outcome and filters; snapshot browser with Rebuild; sync log. | 6.4 |
 | Drive trigger settings (dialog) | gdrive | Account, drive, crypt remote, path mapping with pickers, polling, minimum age, filters. | 6.4 |
 | **Targets** | targets, scan | Every target with server, libraries, path rules, queued, state. | 4.9 |
-| Target (dialog) | targets, scan | Connection with Test; path mappings with picker and "try a path"; anchors, and for Plex empty trash and merged-item handling. | 4.9 |
-| Add target (dialog) | targets | Choose the server type; name, URL, token; Test. | 4.9 |
+| Target (dialog) | targets, scan | Enabled, and whether scans wait or are dropped while it is off; connection with Test, Sign in with Plex, and the certificate check; pacing; path mappings with picker and "try a path"; anchors, and for Plex empty trash and merged-item handling. | 4.9 |
+| Add target (dialog) | targets | Choose the server type; name, URL, token or Sign in with Plex; Test. | 4.9 |
 | **Settings › General** | core | Callback base URL and Autoplow's browser address; admin username, Change password (dialog), the sign-in switch with its warning, trusted proxies; time zone; scan timing defaults; how long things are kept; backups with Backup now; log levels per component; bootstrap status. | 0.10 |
 | **Settings › Anchors** | scan | Anchor files with what they hold and their state; dialog with the file picker and targets. | 4.6 |
 | **Settings › rclone** | rclone | Config path; which rclone (the host's by default, or a given path); version against the minimum; running state, or "not needed" when nothing uses it; remotes, read-only, with who uses them and their health. | 5.2 |

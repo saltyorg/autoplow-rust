@@ -21,6 +21,40 @@ Narrow, typed, well-tested clients for every media-server target. Each client li
 
 Behaviour each client must respect is recorded in `docs/platform-notes/`.
 
+## Connecting
+*(decided 2026-11-10)*
+- **Plex:** "Sign in with Plex" opens Plex's own approval page and stores the token it returns. That token also lets track preferences list the server's shared users. Pasting a token stays possible.
+- **Jellyfin, Emby, Tofa, Tdarr:** an API key.
+- **Another Autoplow:** a webhook trigger's token on the other instance.
+- **Certificates:** checked by default. A target can have the check switched off, for a server with a self-signed certificate; the dialog warns that this removes protection against impersonation.
+- **Versions:** each client records, in its platform note, the oldest server version it was verified against. An older server is still used, with a warning on the target.
+- **Test** connects, reads the version and lists the libraries, without saving anything.
+
+## Talking to a server
+- **Pacing:** one scan request at a time per target, with a gap between them (default 1 s). Both are adjustable per target. A batched call counts as one request.
+- **Timeouts:** 10 s to connect, 30 s for an answer, adjustable per target.
+- **Size:** a response is capped at 4 MB. Anything that can be larger (library and item listings) is always fetched in pages.
+
+## Health
+| State | Meaning |
+|---|---|
+| Healthy | The last call succeeded. |
+| Backing off | A call failed at the target level (no connection, 5xx, 429). Calls wait: 30 s, doubling to at most 15 minutes, or as `Retry-After` says. |
+| Unavailable | It has been backing off for 2 minutes. This is what notifies (see the notifications spec). |
+| Disabled | Switched off by the admin. |
+
+- **Recovery:** while not healthy, a light status call is tried on the backoff schedule even with nothing queued, so recovery is noticed.
+- **Disabled targets:** a target can be switched off without deleting it. It receives nothing. Per target, the admin chooses what happens to scans meant for it:
+  - **Keep** (default): they stay queued, shown as "target disabled", and are sent when it is switched on again.
+  - **Drop:** nothing is queued for it while it is off.
+
+## Sessions
+- A websocket that drops reconnects with backoff. After three failed attempts the client polls every 10 s until the websocket is back, so the session count has no gap.
+
+## Changes on the server
+- Library lists refresh periodically and on a lookup miss.
+- A library that disappears, or whose folders change, raises a warning on the target and marks the path mappings that no longer lead anywhere.
+
 ## Acceptance criteria
 1. Each client passes contract tests against recorded fixtures, covering every request it makes and every response shape it parses, including error and `Retry-After` cases.
 2. **Shared HTTP client:**
@@ -32,6 +66,14 @@ Behaviour each client must respect is recorded in `docs/platform-notes/`.
 4. Tokens never appear in logs, including request URLs.
 5. Live tests (feature `live`, env-configured) reproduce the platform-notes timings for Plex, Jellyfin and Emby.
 6. Overlapping library locations on Jellyfin or Emby produce a target warning that names the owning library.
+7. "Sign in with Plex" stores a working token without the admin copying one; a pasted token works too.
+8. With certificate checking on, a self-signed server is refused with a clear error; with it switched off for that target, the same server connects, and other targets still check.
+9. Queued scans for one target are sent one at a time with the configured gap, while another target proceeds independently.
+10. A target moves from backing off to unavailable after 2 minutes, and back to healthy on the first success, including one found by the status call with nothing queued.
+11. A disabled target receives no call. With "keep", its scans wait and are delivered after it is enabled; with "drop", nothing is queued for it.
+12. A listing larger than the response cap is read completely through paging.
+13. After a websocket drops, sessions are still reported through polling within 30 s, and the websocket is used again once it reconnects.
+14. Removing a library on the server produces a target warning and flags the mappings that pointed into it.
 
 ## Boundaries
 - **Always:** follow `CONSTRAINTS.md`; record new third-party behaviour in `docs/platform-notes/`.

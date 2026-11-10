@@ -92,7 +92,7 @@ Common to all triggers:
 2. Two events for the same folder within the minimum age produce one delivery; an event arriving after a delivery was dispatched always produces another delivery (generation acknowledgement).
 3. A queued parent folder absorbs later child folders for the same target; a child queued first is replaced when its parent arrives.
 4. With a target offline, deliveries to other targets continue unaffected; the offline target's entries are retained across restart and delivered after it recovers (exponential backoff honouring `Retry-After`).
-5. Every queued entry exposes a wait reason (debounce, max-wait pending, anchor missing, path missing, target backoff, ready) via the API.
+5. Every queued entry exposes a wait reason (debounce, max-wait pending, anchor missing, path missing, target backoff, target disabled, ready) via the API.
 6. Delete events skip the existence check; with the optional 'path must exist' check enabled, add/change entries are held until the path exists or a timeout warning is raised.
 7. With any applicable anchor missing, no delivery (and never a delete) is sent for the affected scope.
 8. `/mnt/Movies` never matches a library at `/mnt/Movies4K`; a folder contained by locations in two libraries is delivered to both.

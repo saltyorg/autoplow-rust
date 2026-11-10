@@ -183,8 +183,13 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 ## Phase 2: `targets`
 
 ### Task 2.1: Shared HTTP client and library resolver
-- [ ] **AC (targets AC2–AC4; scan AC8, the containment part):**
-  - Timeouts, 4 MB response cap, `Retry-After`, error taxonomy.
+- [ ] **AC (targets AC2–AC4, AC8–AC12, AC14; scan AC8, the containment part):**
+  - Timeouts (10 s, 30 s), 4 MB response cap with paged listings, `Retry-After`, error taxonomy.
+  - Certificate check, with a per-target switch.
+  - Pacing: one request at a time per target with a gap.
+  - Health states, backoff to 15 minutes, status call while unhealthy, unavailable after 2 minutes.
+  - Disabled targets, keeping or dropping their scans.
+  - Warnings when a library disappears or its folders change.
   - Token redaction in URLs.
   - Library cache refreshed periodically and on a miss.
   - Component-based containment, multi-library resolution.
@@ -194,10 +199,11 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** M.
 
 ### Task 2.2: Plex client
-- [ ] **AC (targets AC1):**
+- [ ] **AC (targets AC1, AC7, AC13):**
+  - Sign in with Plex, or a pasted token.
   - Sections with paging headers.
   - `refresh?path=`.
-  - Sessions websocket, non-blocking reader.
+  - Sessions websocket, non-blocking reader, reconnect with polling fallback.
   - Section state for verified empty trash.
 - **V:** fixture contract tests; `live` test reproduces the platform-notes timings.
 - **Dep:** 2.1.
