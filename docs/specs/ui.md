@@ -92,7 +92,7 @@ Every page and dialog in v1, the module that owns it, what it shows and does, an
 | **Setup** (first start only) | core | Shown while no admin exists: choose a username and password; asks for the setup token unless opened on the host itself. | 0.9 |
 | **Dashboard** | core | Tiles: scans delivered and queued, upload speed and volume, parity findings. Target states with a link to Health. The next scans with their wait reasons, running uploads, and the newest parity findings, each linking to its page. Scan button. | 12.1 |
 | **Health** | core | Needs attention first, each row linking to where it is fixed. Every background component with state, restarts and detail. Connections: targets, Arrs, rclone remotes, Google accounts, download clients. Recent health events. | 0.10 |
-| **Scans** | scan | The queue per target with each entry's wait reason and time, filters by target and reason, Send or Retry per entry. Dead letters with Edit, Retry, Discard and Discard all. | 4.4 |
+| **Scans** | scan | The queue per target with each entry's wait reason and time, filters by target and reason, Send or Retry per entry. Dead letters with Edit, Retry, Discard and Discard all. Unmatched folders with their trigger. Delivered scans from the last 7 days on request. | 4.4 |
 | Scan (dialog) | scan | A folder with a picker; a live preview per target of the rewritten path, the library and whether the folder exists; "send now". | 4.4 |
 | **Uploads** | upload | Speed, volume, readiness checks, rclone state. Running transfers with Stop; Hold and Stop all. Files not ready yet with the reason and when they become eligible. Destinations with remote health. | 8.6 |
 | Destination (dialog) | upload | Name, local folder, ordered remotes with sub-path and per-remote cap, readiness rules, hardlink policy. | 8.6 |
@@ -105,16 +105,16 @@ Every page and dialog in v1, the module that owns it, what it shows and does, an
 | **Notifications** | notifications | Channels with state; which events go where; undelivered messages with Resend, Discard and Discard all per channel. | 1.2 |
 | Channel (dialog) | notifications | Enabled, name, URL, events grouped by category with All and None, one optional filter for the channel, Test; shows when the channel is failing and why. | 1.2 |
 | **Triggers** | scan | Every trigger with type, auth, minimum age, events today, last event, connection state. | 4.9 |
-| Trigger (dialog) | scan, arr | Name, authentication, minimum age and filters, targets never fed, path rules inline. For an Arr: its URL and API key with Test, the managed webhook's state, and older webhooks with Disable and Delete. | 4.9, 3.3, 3.4 |
+| Trigger (dialog) | scan, arr | Name, authentication, minimum age, extra wait per event type and filters, targets never fed, path rules inline. For an Arr: its URL and API key with Test, the managed webhook's state, and older webhooks with Disable and Delete. | 4.9, 3.3, 3.4 |
 | Add trigger (dialog) | scan | Choose Arr, webhook, local folders or Google Drive, then that type's fields. | 4.9 |
 | Add Arr instance (dialog, steps) | arr | Connect and detect; map root folders by suggestion or picker; preview of the managed webhook; review. | 3.4 |
 | **Google Drive trigger** | gdrive | State, Poll, Pause; settings summary; changes with outcome and filters; snapshot browser with Rebuild; sync log. | 6.4 |
 | Drive trigger settings (dialog) | gdrive | Account, drive, crypt remote, path mapping with pickers, polling, minimum age, filters. | 6.4 |
 | **Targets** | targets, scan | Every target with server, libraries, path rules, queued, state. | 4.9 |
-| Target (dialog) | targets, scan | Enabled, and whether scans wait or are dropped while it is off; connection with Test, Sign in with Plex, and the certificate check; pacing; path mappings with picker and "try a path"; anchors, and for Plex empty trash and merged-item handling. | 4.9 |
+| Target (dialog) | targets, scan | Enabled, and whether scans wait or are dropped while it is off; connection with Test, Sign in with Plex, and the certificate check; pacing and merging of many folders into their parent; path mappings with picker and "try a path"; anchors, and for Plex empty trash and merged-item handling. | 4.9 |
 | Add target (dialog) | targets | Choose the server type; name, URL, token or Sign in with Plex; Test. | 4.9 |
 | **Settings › General** | core | Callback base URL and Autoplow's browser address; admin username, Change password (dialog), the sign-in switch with its warning, trusted proxies; time zone; scan timing defaults; how long things are kept; backups with Backup now; log levels per component; bootstrap status. | 0.10 |
-| **Settings › Anchors** | scan | Anchor files with what they hold and their state; dialog with the file picker and targets. | 4.6 |
+| **Settings › Anchors** | scan | Anchor files with what they hold and their state; dialog with the file picker, the targets, and an optional folder it is limited to. | 4.6 |
 | **Settings › rclone** | rclone | Config path; which rclone (the host's by default, or a given path); version against the minimum; running state, or "not needed" when nothing uses it; remotes, read-only, with who uses them and their health. | 5.2 |
 | **Settings › Uploads** | upload | Global transfer cap, upload windows, fixing file dates. | 8.6 |
 | **Settings › Downloaders** | downloaders | Clients with what pauses and limits them and their state; dialog with URL, credentials, Test and pause conditions. | 7.3 |

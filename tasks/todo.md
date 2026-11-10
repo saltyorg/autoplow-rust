@@ -294,7 +294,9 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 ## Phase 4: `scan`
 
 ### Task 4.1: Per-target durable queue
-- [ ] **AC (scan AC2, AC3, AC5):**
+- [ ] **AC (scan AC2, AC3, AC5, AC15, AC17):**
+  - Merging many waiting folders into their parent, never a library root.
+  - Send now goes first for its target.
   - Generation acknowledgement.
   - Unique pending index with upsert.
   - Parent absorbs children.
@@ -307,7 +309,8 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** M.
 
 ### Task 4.2: Target workers and delivery
-- [ ] **AC (scan AC4, AC9, AC13):**
+- [ ] **AC (scan AC4, AC9, AC13, AC14):**
+  - A delete scans the removed path; a server that cannot do that is reported, not sent.
   - One isolated worker per target.
   - Backoff that honours `Retry-After`.
   - Per-path dead-letter, with retry, discard, discard all and 30-day pruning.
@@ -318,7 +321,8 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** M.
 
 ### Task 4.3: Trigger framework and auth
-- [ ] **AC (scan AC1, plus spec "Common to all triggers"):**
+- [ ] **AC (scan AC1, AC18, plus spec "Common to all triggers"):**
+  - Back-pressure above 10 000 unprocessed events.
   - Per-instance or global credentials.
   - Header, basic or query auth (any one passes).
   - Filters, target excludes, extra wait per event type.
@@ -328,7 +332,8 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** M.
 
 ### Task 4.4: Arr trigger wiring, manual scan API with preview, queue UI
-- [ ] **AC (scan AC1, AC5, AC8):**
+- [ ] **AC (scan AC1, AC5, AC8, AC19):**
+  - Unmatched folders listed with their trigger; delivered history for 7 days.
   - Arr events produce folder scans, resolved to libraries by path components.
   - `POST /scans` with `dry_run` preview (rewrite, library, existence).
   - Scans page with wait reasons and dead letters; the Scan dialog with its live preview (ui AC10).
@@ -338,7 +343,8 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** M.
 
 ### Task 4.5: Legacy, Bazarr and generic triggers
-- [ ] **AC (scan AC12):**
+- [ ] **AC (scan AC12, AC21):**
+  - Generic webhook with an optional `type`.
   - autoscan `/triggers/*` and A-Train.
   - Bazarr: `/triggers/bazarr`, `/stats`, `/api/config-template`.
   - Generic `{paths:[]}`.
@@ -348,7 +354,8 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** M.
 
 ### Task 4.6: Anchors, "path must exist", verified Plex empty trash
-- [ ] **AC (scan AC6, AC7, Plex trash row):**
+- [ ] **AC (scan AC6, AC7, AC16, Plex trash row):**
+  - "Path must exist" checked on the host; dead-lettered after 1 hour if the folder never appears.
   - Anchors at any scope; all applicable anchors required.
   - Hold-and-retry existence check; deletes exempt.
   - Empty trash only after the scan is observed to complete.
@@ -369,7 +376,8 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** S.
 
 ### Task 4.8: Local filesystem trigger
-- [ ] **AC (scan triggers table):**
+- [ ] **AC (scan AC20, triggers table):**
+  - Close-after-write events, ignore patterns, walking past the watch limit.
   - inotify, walk or both per path.
   - The walk snapshot is persisted (new, changed and deleted files).
   - Overflow handling.
