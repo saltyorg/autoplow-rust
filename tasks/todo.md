@@ -382,7 +382,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 ### Task 5.1: Supervised `rcd` and RC client
 - [ ] **AC (rclone AC1–AC8):**
   - Unix socket in a 0700 directory.
-  - Minimum version 1.75.
+  - Minimum version 1.75, no maximum; configurable binary path; `rclone.unsupported` below the minimum.
   - Restart with "job state lost" reporting.
   - Typed client and job/group tracking.
   - Stats-group sweep.

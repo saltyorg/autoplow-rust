@@ -14,7 +14,11 @@ Run and supervise `rclone rcd` as a private child process, and give `upload`, `t
 - **Started only when needed** *(decided 2026-11-10)*: the child runs while something uses it: an upload destination, or a Drive monitor with a crypt remote. With neither (for example an install that only limits download clients), it is not started, and a missing or too-old rclone is not an error.
 - **Child process:**
   - `rclone rcd` on a unix socket in a 0700 directory, with `--config <user rclone.conf>`.
-  - A minimum version check.
+  - **Which rclone:** the one shipped in the image by default. A setting can point to another binary, for users who want a newer rclone.
+  - **Version check** *(decided 2026-11-10)*:
+    - Only a minimum is enforced. There is no maximum: a newer rclone than the one Autoplow was tested with runs without a warning.
+    - Below the minimum, the child is not started. That shows on the Health page and raises `rclone.unsupported`, which is sent only to channels that subscribe to it.
+    - The minimum changes only in an Autoplow release, and that release's notes say so.
   - Readiness via `rc/noop`.
   - Restart with backoff.
 - **Typed client for:**
@@ -30,7 +34,7 @@ Run and supervise `rclone rcd` as a private child process, and give `upload`, `t
 ## Acceptance criteria
 1. The child starts and answers `rc/noop` within 5 s. The socket isn't reachable over the network, and its directory is 0700.
 2. Killing the child (`SIGKILL`) is detected within 5 s. It restarts with backoff, and the module reports "job state lost" so `upload` re-queues.
-3. A rclone below the minimum version is refused with a clear health error.
+3. A rclone below the minimum version is not started, shows on the Health page with the version found and the version needed, and raises `rclone.unsupported`. A rclone newer than any tested version starts normally with no warning. A configured binary path is used instead of the bundled one.
 4. Progress and completion are tracked per job and group, and are correct for duplicate basenames.
 5. Stats groups for finished jobs are deleted, so the group count stays bounded during a 24-hour soak test.
 6. A bandwidth change via `core/bwlimit` applies to running transfers (verified in an integration test with a crypt-over-local remote).
@@ -40,7 +44,7 @@ Run and supervise `rclone rcd` as a private child process, and give `upload`, `t
 
 ## Boundaries
 - **Always:** follow `CONSTRAINTS.md`.
-- **Ask first:** changing the minimum rclone version.
+- **Ask first:** changing the minimum rclone version (only in a release, with a release note).
 - **Never:** pass RC credentials on argv; expose RC on TCP; write to `rclone.conf`.
 
 ## Open questions

@@ -15,11 +15,11 @@ Tell the admin about failures, health changes, parity findings and activity on t
 - **Generic webhook:** a JSON POST of `{events:[{type, category, timestamp, summary, details}]}` with optional headers.
 
 ## Event catalogue
-Each event belongs to a category. Users subscribe at the level of individual event types. These 25 types are the v1 catalogue *(final 2026-11-10)*.
+Each event belongs to a category. Users subscribe at the level of individual event types. These 26 types are the v1 catalogue *(final 2026-11-10)*.
 
 | Category | Event types |
 |---|---|
-| Failures & health | `target.unavailable`, `target.recovered`, `remote.unhealthy`, `remote.quota`, `remote.recovered`, `anchor.missing`, `anchor.restored`, `item.deadlettered`, `downloader.error`, `arr.connection.drift`, `gdrive.account.revoked`, `gdrive.monitor.stopped`, `component.failing` |
+| Failures & health | `target.unavailable`, `target.recovered`, `remote.unhealthy`, `remote.quota`, `remote.recovered`, `anchor.missing`, `anchor.restored`, `item.deadlettered`, `downloader.error`, `arr.connection.drift`, `gdrive.account.revoked`, `gdrive.monitor.stopped`, `component.failing`, `rclone.unsupported` |
 | Library parity | `parity.mismatch.found`, `parity.fix.applied`, `parity.fix.failed`, `parity.merged.manual`, `parity.run.completed` |
 | Uploads | `upload.completed` (aggregated), `upload.failed`, `downloader.paused`, `downloader.resumed`, `throttle.changed` |
 | Scans | `scan.delivered` (aggregated), `scan.failed` |
@@ -27,6 +27,7 @@ Each event belongs to a category. Users subscribe at the level of individual eve
 Notes on the health events *(added 2026-10-30)*:
 - `gdrive.account.revoked`: Google revoked or expired an account's grant. Every monitor using that account stops; it is reported once, for the account, not again per monitor.
 - `gdrive.monitor.stopped`: a monitor stopped for a reason of its own, such as a missing crypt remote or names that mostly fail to decrypt.
+- `rclone.unsupported`: the rclone in use is older than the minimum this Autoplow release supports, so uploads and crypt name decoding are off until it is updated. Raised once per start, not repeatedly.
 - `component.failing`: a background component restarted 3 times within 10 minutes (the default) and is still restarting with backoff. Single restarts are only logged.
 
 ## Routing
@@ -58,4 +59,4 @@ Notes on the health events *(added 2026-10-30)*:
 - **Never:** Include secrets in notification bodies.
 
 ## Open questions
-- ~~Final event catalogue~~ (**decided 2026-11-10:** the 25 types above).
+- ~~Final event catalogue~~ (**decided 2026-11-10:** the 26 types above).
