@@ -661,11 +661,14 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 ## Phase 10: `parity`
 
 ### Task 10.1: Engine
-- [ ] **AC (parity AC1, AC2, AC5):**
-  - Phased fetch and path-keyed join.
+- [ ] **AC (parity AC1, AC2, AC5, AC9–AC11, AC13, AC14):**
+  - Phased, paced fetch and a streaming path-keyed join.
   - Findings: mismatches, gaps both ways, file mismatches, merged items.
   - Unknown agents reported, never modified.
-  - Ignore list.
+  - Finding types switchable per pair; pairs excludable; a server with a missing anchor is not checked.
+  - Extras, additional versions and Arr entries without a file produce no finding.
+  - Finding identity across runs; skip, ignore and resolved with retention.
+  - A full check is a long job; a second one is refused.
   - 500k-item run within budget.
 - **V:** fixtures per server; capped performance test.
 - **Dep:** 3.1, 2.1.
@@ -673,14 +676,17 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** M.
 
 ### Task 10.2: Fixes and triggers
-- [ ] **AC (parity AC3, AC4, AC6):**
-  - Review-first; auto-fix opt-in.
+- [ ] **AC (parity AC3, AC4, AC6–AC8, AC12):**
+  - Review-first; auto-fix opt-in per server and finding type.
+  - Scans queued as the fix for missing and stale files.
+  - Safety limit suspends automatic fixing for the run and says so in the completion notice.
+  - Only findings new since the previous run notify.
   - Rate-limited fixes, verified by read-back, audited.
   - Emby/Jellyfin fixes change provider IDs only.
   - Merged items: off, notify or auto-split.
   - Schedule, on-demand and after-import triggers, each switchable.
 - **V:** fakes; `live` dry run.
-- **Dep:** 10.1, 1.2.
+- **Dep:** 10.1, 1.2, 4.1.
 - **Files:** `crates/parity/src/{fix,triggers}.rs`.
 - **Size:** M.
 

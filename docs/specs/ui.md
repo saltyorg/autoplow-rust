@@ -118,7 +118,7 @@ Every page and dialog in v1, the module that owns it, what it shows and does, an
 | **Settings › rclone** | rclone | Config path, with Reload and a note when a restart is pending; which rclone (the host's by default, or a given path); extra options and environment variables; version against the minimum; running state, or "not needed" when nothing uses it; remotes, read-only, with who uses them and their health. | 5.2 |
 | **Settings › Uploads** | upload | Global transfer cap, upload windows, fixing file dates. | 8.6 |
 | **Settings › Downloaders** | downloaders | Clients with what pauses and limits them and their state; dialog with Enabled, URL, credentials, Test, and pause conditions with the folder whose free space is watched. | 7.3 |
-| **Settings › Library parity** | parity | When to check, automatic fixes per server, match language, what is compared. | 10.3 |
+| **Settings › Library parity** | parity | When to check; automatic fixes per server and finding type, with the safety limit; match language; what is compared, with finding types and pairs that can be switched off. | 10.3 |
 | **Settings › Google Drive** | gdrive | Redirect URI with its reachability check; OAuth clients and accounts, each with a dialog; setup guide. | 6.1 |
 | **Settings › API keys** | core | Keys with access level and Copy; dialog to rename, change access, show, regenerate, revoke; what each access level can do. | 0.10 |
 | **Settings › Appearance** | core | Accent with the contrast check and a preview; density. | 0.10 |
