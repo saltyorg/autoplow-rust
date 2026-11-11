@@ -63,7 +63,7 @@ Run and supervise `rclone rcd` as a private child process, and give `upload`, `t
   - `core/bwlimit`
   - `config/listremotes`, `config/providers` and `options/info` (which remotes and options exist)
   - `options/set` (settings for every transfer) and `operations/fsinfo` (testing a remote with its options)
-  - `backend/command` with the crypt `decode` command, in batches (for `gdrive` crypt remotes)
+  - `backend/command` with the crypt `decode` and `encode` commands, in batches (for `gdrive` crypt remotes). rclone fails a whole batch for one bad name, so the client splits a failed batch to find which names fail.
 - **Polling:** completion and progress, by job ID and group.
 - **Cleanup:** finished stats groups are swept.
 - **On a fresh child:** whenever the child starts (first start, crash, restart), the stored settings and the current bandwidth limit are applied before any transfer is started.
@@ -93,7 +93,7 @@ These are the notification types this module raises (the catalogue is in [notifi
 5. Stats groups for finished jobs are deleted, so the group count stays bounded during a 24-hour soak test.
 6. A bandwidth change via `core/bwlimit` applies to running transfers (verified in an integration test with a crypt-over-local remote).
 7. Autoplow's own SIGTERM shutdown completes even after the child performed partial-file copies, because rclone's atexit hook stays in the child.
-8. `decode` on a crypt-over-local remote returns the original names for a batch of encrypted paths, and reports which names couldn't be decrypted.
+8. `decode` on a crypt-over-local remote returns the original names for a batch of encrypted paths. A batch holding names that cannot be decrypted still returns every other name, and reports which ones failed.
 9. With no upload destination and no crypt Drive monitor, no rclone child is started and no rclone health error is raised; adding a destination starts it without restarting Autoplow.
 10. Killing Autoplow (`SIGKILL`) leaves no rclone child running, and a child left over from an earlier run is stopped before a new one starts.
 11. A child that stops answering is killed and restarted within 2 minutes, and job state is reported lost.

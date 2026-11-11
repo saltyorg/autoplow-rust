@@ -76,7 +76,11 @@ When the monitored folder holds an rclone crypt remote, the Drive API only sees 
 - **Failures:**
   - A name that can't be decrypted (a file that isn't part of the crypt remote, or a wrong password) isn't mapped. It's recorded in the change log as "couldn't decrypt", and no scan is produced.
   - If the crypt remote is missing from `rclone.conf`, or most names in the first snapshot fail to decrypt, the monitor stops with a `gdrive.monitor.stopped` notification instead of mapping garbage.
-- **Spike required:** before the design is final, verify against rclone 1.75 that `decode` through `rc` handles full paths, directory-name encryption on and off, every filename encoding, and batches large enough for a full snapshot.
+- **What the decode call does and does not do** *(verified 2026-11-11, [platform note](../platform-notes/rclone.md))*:
+  - A full file path decodes in every crypt mode: each name encryption and encoding, with folder names encrypted or not.
+  - A folder's own path does not decode when folder names are stored in plain text. So a folder is decoded together with a probe file name that rclone encoded for that remote, and the probe is cut off again. This works in every mode and needs no knowledge of the remote's settings.
+  - Paths are given relative to the folder the crypt remote stores in, never as full Drive paths.
+  - One bad name fails the whole batch. When a batch fails, it is split and tried again until the names that fail are known; those are the "couldn't decrypt" entries. A batch is at most 50 000 paths.
 - **When names cannot be decoded right now** (rclone is restarting, hung or unsupported): the monitor waits and keeps its place. It does not log the changes as undecryptable and move on.
 
 ## Change log
@@ -125,7 +129,7 @@ These are the notification types this module raises (the catalogue is in [notifi
 3. Events are committed before the page token is saved: a crash between the two replays the changes rather than losing them.
 4. An invalid page token triggers a re-snapshot and diff without losing changes.
 5. Rate-limit responses (403 rateLimitExceeded, 429, `Retry-After`) back off without failing the monitor.
-6. With a crypt remote set, changes under encrypted names produce scans for the decrypted mapped paths. A name that can't be decrypted produces no scan and a "couldn't decrypt" change-log entry. A missing crypt remote stops the monitor with a `gdrive.monitor.stopped` notification.
+6. With a crypt remote set, changes under encrypted names produce scans for the decrypted mapped paths, for files and for folders, in every crypt mode (each name encryption and encoding, folder names encrypted or not). A name that can't be decrypted produces no scan and a "couldn't decrypt" change-log entry. A missing crypt remote stops the monitor with a `gdrive.monitor.stopped` notification.
 7. Every change read appears in the change log with its outcome, written in the same transaction as its events. Entries older than the retention period are pruned.
 8. "Poll now" runs a poll immediately, within the rate limit. A paused monitor makes no API calls, stays paused after a daemon restart, and on resume processes the changes made while paused.
 9. "Rebuild snapshot" replaces the snapshot and emits events only for the differences.

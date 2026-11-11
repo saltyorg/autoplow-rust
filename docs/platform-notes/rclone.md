@@ -122,6 +122,19 @@ Verified 2026-11-11 against rclone v1.75.1. Global options were set with `option
 - Dropbox batch commits with one job per file.
 - Token renewal with one OAuth remote opened twice in the daemon beside a mount using the same config.
 
+## Crypt name decoding through the API
+Verified 2026-11-11 against rclone v1.75.1. Ten crypt remotes over local folders covered `filename_encryption` standard (with `filename_encoding` base32, base64 and base32768), obfuscate and off, each with `directory_name_encryption` on and off. Files with accented, CJK and 120-character names were copied in through each remote, the stored names were listed with `operations/list` on the underlying folder, and `backend/command` with `decode` was compared against the original paths.
+
+- **Call:** `backend/command` with `{"command": "decode", "fs": "<crypt remote>:", "arg": [paths…]}`. The result is a list of decoded paths in the order given.
+- **A full file path decodes correctly in all ten modes,** including when folder names are stored in plain text and when file names are stored in plain text with the `.bin` suffix.
+- **A folder path fails when folder names are not encrypted.** `decode` treats the last segment as a file name, so a plain folder name is an error ("not a multiple of blocksize", "does not match suffix"). The same call works when folder names are encrypted.
+- **A folder path can be decoded in every mode by appending an encoded file name.** `encode` of a one-letter name gives that name as the remote stores it; `decode` of `<folder path>/<that name>` returned `<decoded folder path>/<the letter>` in all ten modes. This needs no knowledge of the remote's settings.
+- **Paths are relative to the crypt remote's own root.** A path that still carries the folder the crypt remote stores in is an error. A leading slash is accepted and kept.
+- **One bad name fails the whole call** with status 500 and the first failing name in the message; no partial result is returned. Finding which names fail means splitting the list and calling again.
+- **A wrong password fails the same way** ("bad PKCS#7 padding"), for every name.
+- **Size:** 50 000 paths in one call (a 10.7 MB request) were decoded in 0.3 s.
+- **Names must be the stored names as rclone sees them.** Listing the folder with operating-system tools gave different text for base32768 names on a local disk, because the local backend re-encodes some characters. Names taken from the Drive API are not affected by that local-disk translation; this was not tested against Drive.
+
 ## Signal handling hazard (any process that runs rclone code in-process)
 - `lib/atexit` installs `signal.Notify(SIGINT, SIGTERM)` the first time anything calls `atexit.Register`.
 - `fs/operations/copy.go` does this for any copy that uses a partial file (destinations with partial-upload support, for example local and sftp). The hook stays for the life of the process.

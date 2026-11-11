@@ -491,12 +491,12 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** M.
 
 ### Task 6.3: Crypt remotes
-- [ ] **AC (gdrive AC18, with the crypt ACs below).** **Spike first:** confirm against rclone 1.75 that `decode` through `rc` handles full paths, directory-name encryption on and off, every filename encoding, and snapshot-sized batches. Record the result in `docs/platform-notes/`.
+- [ ] **AC (gdrive AC18, with the crypt ACs below).** The decode behaviour is recorded in `docs/platform-notes/rclone.md` (verified 2026-11-11): folders are decoded with an encoded probe name, paths are relative to the crypt remote's folder, and a failed batch is split.
 - [ ] **AC (gdrive AC6):**
   - Snapshot stores encrypted and decrypted names; polls decode only unseen names.
   - Rewrite rules and filters match decrypted paths.
   - Undecryptable names produce no scan and a change-log entry; a missing crypt remote stops the monitor with `gdrive.monitor.stopped`.
-- **V:** fake Drive API serving names encrypted by a real crypt-over-local remote.
+- **V:** fake Drive API serving names encrypted by real crypt-over-local remotes, one per crypt mode, with files, folders and names that do not decrypt.
 - **Dep:** 6.2, 5.1.
 - **Files:** `crates/gdrive/src/crypt.rs`, `crates/gdrive/src/snapshot.rs`, `docs/platform-notes/`.
 - **Size:** M.
