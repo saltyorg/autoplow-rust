@@ -518,8 +518,8 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 ## Phase 7: `downloaders`
 
 ### Task 7.1: Verify the client APIs
-- [ ] **Spike:** against a pinned version of SABnzbd, NZBGet and qBittorrent, verify pause and resume, setting and reading the download and upload limits, their units, and whether a scheduler or alternative-speed mode can be detected. Record each as a platform note.
-- **V:** the platform notes exist, with versions and method.
+- [ ] **Spike:** run the live checks listed at the end of `docs/platform-notes/download-clients.md` against pinned versions of SABnzbd, NZBGet and qBittorrent, and mark each baseline claim there as confirmed or corrected.
+- **V:** the platform note states each check's result, with versions.
 - **Dep:** none.
 - **Files:** `docs/platform-notes/`.
 - **Size:** S.
@@ -635,11 +635,12 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 
 ### Task 9.1: Session registry
 - [ ] **AC (throttle AC1, AC2, AC11, AC12, AC17):**
-  - Which kinds of playback count; an unreadable server counts as zero; sessions dropped after 2 minutes without an update.
-  - Plex, Jellyfin and Emby websockets, plus Tofa polling.
+  - Which kinds of playback count; an unreadable server counts as zero; each reading replaces the last, with a check read every 2 minutes.
+  - Plex events followed by a list read; Jellyfin 10.10+ websocket with keep-alive; Emby websocket (provisional) or polling; Tofa polling.
+  - Bitrate per server as the throttle spec names it; local streams by Plex's flag or by the local networks setting.
+  - **First:** run the live checks listed under "Sessions" in the three platform notes.
   - Each server counted once.
   - Paused sessions excluded; LAN optional.
-  - Stale expiry.
 - **V:** fake websocket tests.
 - **Dep:** 2.2, 2.3, 2.4.
 - **Files:** `crates/throttle/src/sessions.rs`.
@@ -722,7 +723,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 ## Phase 11: `track-preferences`
 
 ### Task 11.0: Verify user tokens
-- [ ] **Spike:** against a pinned Plex version, verify how tokens are obtained for shared, managed and PIN-protected home users, and that a part write with a user's token changes only that user's selection. Record it as a platform note.
+- [ ] **Spike:** run the live checks listed under "User tokens and track selection" in `docs/platform-notes/plex.md` against a pinned Plex version: a token for each user kind, per-user storage of a selection, the two-part file, a revoked token, and the without-playing event.
 - **V:** `live` test on a test library.
 - **Dep:** 2.2.
 - **Files:** `docs/platform-notes/`.

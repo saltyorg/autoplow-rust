@@ -62,6 +62,7 @@ Run and supervise `rclone rcd` as a private child process, and give `upload`, `t
   - `core/stats`, `core/transferred`, `core/stats-delete`
   - `core/bwlimit`
   - `config/listremotes`, `config/providers` and `options/info` (which remotes and options exist)
+  - `config/get` for one named remote, to read where a crypt remote stores its files and how it encrypts names (for `gdrive`). The answer also holds that remote's secrets; the client returns only the fields asked for and drops the rest without logging it.
   - `options/set` (settings for every transfer) and `operations/fsinfo` (testing a remote with its options)
   - `backend/command` with the crypt `decode` and `encode` commands, in batches (for `gdrive` crypt remotes). rclone fails a whole batch for one bad name, so the client splits a failed batch to find which names fail.
 - **Polling:** completion and progress, by job ID and group.
@@ -76,7 +77,7 @@ Run and supervise `rclone rcd` as a private child process, and give `upload`, `t
   - set the bandwidth limit, which throttle owns;
   - change what a transfer does to files (dry run, skipping checks, backup folders). Autoplow sets those itself.
   - Backend options are never given to the whole daemon: they would override the values in the user's own `rclone.conf` for every remote of that type.
-- **Control calls:** only the calls listed under "Typed client" are ever made. Calls that run commands, change the config or return its secrets are never reachable from anything the admin enters.
+- **Control calls:** only the calls listed under "Typed client" are ever made. Calls that run commands or change the config are never made. The one call that returns a remote's secrets (`config/get`) is made only by Autoplow itself for a remote named in a Drive monitor, and its answer never leaves the rclone module whole.
 - **Environment:** the child gets a short fixed set (`HOME`, `PATH`, `TZ`, proxy settings) plus the config password when one is set. It never gets Autoplow's secret key, and it does not inherit any capability the service holds.
 - **The rclone path** must be absolute, a regular file, and not writable by anyone but its owner and root.
 - **Remotes** in a destination must be names from `rclone.conf` or an absolute local path; a connection string made up on the spot is refused. A destination may not contain Autoplow's data directory or `rclone.conf`.

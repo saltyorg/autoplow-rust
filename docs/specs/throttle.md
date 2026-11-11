@@ -13,28 +13,36 @@ Keep other traffic from degrading playback: adapt rclone's upload bandwidth and 
 
 ## Session sources
 - **Push sources:**
-  - Plex websocket notifications.
-  - Emby and Jellyfin websocket `SessionsStart`.
+  - Plex: a websocket `playing` event carries only the session and its state, so each event triggers a read of the session list.
+  - Jellyfin 10.10 or newer: the websocket sends the whole session list after a `SessionsStart` request. Older Jellyfin is polled.
+  - Emby: the same request, known only from the earlier implementation; provisional until tested live, with polling as the fallback.
   - Tofa: **websocket (required)** once the Tofa docs cover it; until then `GET /api/v1/system/playback/sessions` is a polled fallback.
 - **Polled sources:**
   - Any target configured for polling.
 - **Counting rules:**
   - Each target's sessions are counted **once**. autoplow counted them twice.
-  - A session registry keeps the latest state of each session. A session with no update for 2 minutes is dropped.
+  - Every reading is the server's whole session list and replaces the previous one, so a session is gone as soon as the server drops it.
+  - **A quiet connection is checked:** while a websocket is up, the list is also read every 2 minutes, and once right after connecting. A websocket that connects but never delivers is then noticed and replaced by polling.
+  - Autoplow's own connection can appear in a server's list as a client playing nothing; a session playing nothing is never a stream.
 
 ## Counting
-- Paused sessions are never counted.
+- Paused sessions are never counted. A Plex session that is buffering counts as playing.
 - **What counts** *(decided 2026-11-10)*: films, episodes and live TV. Music, photos and trailers do not count by default; each kind can be switched on. In by-bitrate mode a counted stream contributes its own bitrate.
-- Excluding LAN streams is optional. Whether a stream is local comes from the media server's own report for that session. The UI explains that it only helps when the NIC/LAN is faster than the WAN upstream.
+- Excluding LAN streams is optional. For Plex, whether a stream is local comes from the server's own report for that session. Jellyfin and Emby report only the client's address, so it is compared with the local networks set in Autoplow; an address that matches none, or is missing, counts as remote. Behind a reverse proxy the address can be the proxy's, which the setting's text says. The UI explains that it only helps when the NIC/LAN is faster than the WAN upstream.
 - **A server that can't be read** *(decided 2026-11-10)* counts as zero streams at once: a server that is down is not streaming. The Throttle page says its count is assumed.
 - **"Can't be read"** means the live connection is down **and** a poll has failed. While a websocket reconnects and polling still answers, the count is the polled one and nothing changes.
 - A disabled target is not read and counts as zero.
 - **At start,** throttle places its hold on uploads until the first reading of stream counts, for at most 30 seconds, so nothing uploads unthrottled while people are watching.
 
 ## Units
-- **Limits** are bytes per second, written the way rclone writes them: `80M` is 80 MiB/s. The UI shows and accepts them in the same unit, labelled MiB/s *(decided 2026-11-11)*, and shows transfer speeds in it too, so a speed can be compared with its limit. A download client's limit is converted exactly to the unit its API takes.
+- **Limits** are bytes per second, written the way rclone writes them: `80M` is 80 MiB/s. The UI shows and accepts them in the same unit, labelled MiB/s *(decided 2026-11-11)*, and shows transfer speeds in it too, so a speed can be compared with its limit. A download client's limit is a whole number of KiB/s, sent in the form its API takes and compared with what the client reports back (see the [downloaders spec](downloaders.md)).
 - **Sent to rclone as an exact byte count** with the byte suffix (`83886080B`), and the rate in rclone's reply must equal it. rclone reads bare digits as KiB/s, so a byte count without the suffix would be 1024 times too high (see the [rclone spec](rclone.md)).
-- **Stream bitrates** are bits per second (Mbit/s), as media servers report them.
+- **Stream bitrates** are held as bits per second and shown as Mbps. Plex reports kbps; Jellyfin reports bits per second; Emby's unit is not documented and is checked live.
+- **Which number is a stream's bitrate:**
+  - Plex: the bandwidth the server has reserved for the session, or the file's bitrate when the session has none.
+  - Jellyfin: the transcode's bitrate when transcoding, otherwise the sum of the file's stream bitrates.
+  - Emby: the transcode's bitrate when transcoding, otherwise the item's bitrate.
+  - A counted stream with no bitrate at all counts at the configured maximum, so a missing number never raises the upload limit.
 - By-bitrate mode converts between the two explicitly (8 bits to the byte). Every mixed calculation is covered by a test.
 - The lowest limit that can be set is 100 KiB/s. Stopping is done by pausing or holding, never by a limit of zero.
 
@@ -88,7 +96,7 @@ These are the notification types this module raises (the catalogue is in [notifi
 
 ## Acceptance criteria
 1. Each media server's sessions are counted once, whichever transport (websocket or polling) delivered them.
-2. Paused sessions never count; LAN sessions are excluded only when the option is on.
+2. Paused sessions never count; LAN sessions are excluded only when the option is on. A Jellyfin or Emby session is local only when its client address is inside a configured local network; a session with no bitrate counts at the configured maximum in by-bitrate mode.
 3. In each mode (tiers, per-stream, by-bitrate) the computed limit matches the mode's formula for a table of session sets.
 4. A session reporting an absurd bitrate (e.g. 10 Gbps) is clamped to the per-stream cap and the media bitrate and logged once.
 5. A limit change reaches `core/bwlimit` within 5 s of the session change.

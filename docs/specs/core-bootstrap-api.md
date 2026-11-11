@@ -101,7 +101,7 @@ The detailed schema will be generated from the same Rust types the API uses, as 
   - **notifications:** the problem delay, delivery attempts, the grouping window.
   - **rclone:** config path, which rclone, the config password, the request limit, and the options for every transfer. Options for one remote are stored on the remote (`PUT /remotes/{name}/options`).
   - **uploads:** the global transfer cap, upload windows, fixing file dates, retry attempts, cooldown times, the stalled-transfer time.
-  - **throttle:** what counts as a stream, the settling time, "no new uploads above N streams", and per client "pause above N streams".
+  - **throttle:** what counts as a stream, the local networks, the settling time, "no new uploads above N streams", and per client "pause above N streams".
   - **parity:** when to check, automatic fixes per server and finding type, the safety limit, match language, excluded pairs and finding types, retention.
   - **track-preferences:** per Plex target whether it is on and for which libraries, the ignore label, ignored file patterns, the trigger switches, the sweep time, the default scope.
 

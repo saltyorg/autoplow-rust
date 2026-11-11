@@ -69,7 +69,8 @@ Based on the bernard and autoplow designs.
 
 ## Crypt remotes
 When the monitored folder holds an rclone crypt remote, the Drive API only sees encrypted names, while the mount and the media servers see decrypted ones. Rewrite rules and filters are written against **decrypted** paths.
-- **How names are decrypted:** through the `rclone` module, with rclone's own crypt `decode` backend command (`backend/command` on the crypt remote) on our supervised `rcd`. It uses the remote's settings from the user's `rclone.conf`: password, salt, filename and directory-name encryption, encoding, suffix. Autoplow doesn't read keys itself and never touches the mount.
+- **How names are decrypted:** through the `rclone` module, with rclone's own crypt `decode` backend command (`backend/command` on the crypt remote) on our supervised `rcd`. It uses the remote's settings from the user's `rclone.conf`: password, salt, filename and directory-name encryption, encoding, suffix. Autoplow never touches the mount.
+- **Where the crypt remote stores its files** *(decided 2026-11-11)*: Autoplow asks rclone for the crypt remote's settings and keeps three of them: the remote and folder it stores in, and the two name-encryption settings. The passwords in the same answer are dropped at once and are never stored, logged or shown. The Drive remote underneath is read the same way for a root folder or shared-drive setting. From these Autoplow works out which Drive folder holds the encrypted files, so the admin does not enter it. If that folder is outside the monitor's drive or folders, saving the monitor is refused with the reason.
 - **When:**
   - The snapshot stores both the encrypted and the decrypted name of every entry. Names are decoded in batches when the snapshot is built.
   - Each poll decodes only names it hasn't seen.
@@ -79,7 +80,7 @@ When the monitored folder holds an rclone crypt remote, the Drive API only sees 
 - **What the decode call does and does not do** *(verified 2026-11-11, [platform note](../platform-notes/rclone.md))*:
   - A full file path decodes in every crypt mode: each name encryption and encoding, with folder names encrypted or not.
   - A folder's own path does not decode when folder names are stored in plain text. So a folder is decoded together with a probe file name that rclone encoded for that remote, and the probe is cut off again. This works in every mode and needs no knowledge of the remote's settings.
-  - Paths are given relative to the folder the crypt remote stores in, never as full Drive paths.
+  - Paths are given relative to the folder the crypt remote stores in, never as full Drive paths. Changes outside that folder are not sent for decoding; they are handled as plain names.
   - One bad name fails the whole batch. When a batch fails, it is split and tried again until the names that fail are known; those are the "couldn't decrypt" entries. A batch is at most 50 000 paths.
 - **When names cannot be decoded right now** (rclone is restarting, hung or unsupported): the monitor waits and keeps its place. It does not log the changes as undecryptable and move on.
 
@@ -147,4 +148,4 @@ These are the notification types this module raises (the catalogue is in [notifi
 ## Boundaries
 - **Always:** follow `CONSTRAINTS.md`; validate external input at the boundary.
 - **Ask first:** Reusing rclone.conf tokens.
-- **Never:** Request scopes beyond drive.readonly; read crypt keys from `rclone.conf` ourselves (decryption goes through rclone).
+- **Never:** Request scopes beyond drive.readonly; keep, log or show a crypt password; decrypt names ourselves (decryption goes through rclone).

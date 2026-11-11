@@ -19,3 +19,13 @@ Verified 2026-10-27 with live tests on Emby Server 4.10.2.
 ## Overlapping library locations
 - If one library's location is nested inside another's, the folder appeared in the **inner** library only. That is the opposite of Jellyfin.
 - **Implication:** the UI should warn about overlapping locations on Emby targets.
+
+## Sessions
+Baseline of 2026-11-11 from Emby's REST documentation, its JavaScript client and the earlier Autoplow implementation. **Not run against a live server.**
+
+- **List:** `GET /Sessions` with `X-Emby-Token` or the `api_key` query argument. *Documented.*
+- **State:** `PlayState.IsPaused`, and `PlayState.PlayMethod` (`Transcode`, `DirectStream`, `DirectPlay`). *Documented.*
+- **Bitrate:** `NowPlayingItem.Bitrate` and `TranscodingInfo.Bitrate` exist. Their unit is not documented; the earlier implementation treated them as bits per second.
+- **Local or remote:** not reported. Only `RemoteEndPoint`.
+- **Websocket:** the earlier implementation connected to `/embywebsocket` with `api_key` and `deviceId`, sent `SessionsStart`, and re-read the session list on any session or playback message. Emby's own client uses the same path. **Emby's documentation describes none of these messages,** and no keep-alive.
+- **To check live:** that `SessionsStart` is honoured and what arrives; whether a keep-alive is needed; the bitrate unit against a known file; `RemoteEndPoint` behind a reverse proxy.

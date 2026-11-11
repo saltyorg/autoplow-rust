@@ -40,19 +40,22 @@ Plex only. Tofa has native per-profile language preferences, so PAL doesn't appl
 - An excluded show keeps its stored preferences; nothing is recorded or applied for it while excluded.
 
 ## Users
-- **Coverage:** the owner plus shared and managed users. Each user can be opted out.
+- **Coverage:** the owner, and every shared and managed user Plex gives a token for. Each user can be opted out.
 - **Users who lose access:** their preferences are kept for 30 days, then removed. If access returns within that time, they apply again.
 - **Tokens:**
-  - Taken from the plex.tv `shared_servers` data.
-  - Cached, and refreshed when a request fails.
+  - The owner uses the target's own token.
+  - Every other user's token comes from the plex.tv `shared_servers` list, read with the owner's token. One request returns all users; it is made once and cached, not once per user.
+  - The tokens are limited to this server. No user's plex.tv account token and no PIN is ever requested or held.
+  - **Refreshed** once when the server answers 401 for that token. Any other failure is not a token failure.
+  - **A user without a token** *(decided 2026-11-11)*: Plex has announced that this list will stop returning tokens and switched it off briefly in March 2026. A user for whom no token is returned is shown as "not available from Plex" and skipped, with one Health notice naming how many users are affected. There is no fallback in v1.
   - **Never logged,** never shown in the UI or API, sent only as a request header, and kept only in memory or encrypted.
-  - How a token is obtained for a home user protected by a PIN is verified before build and recorded as a platform note. A user whose token cannot be obtained is shown as such and skipped.
+  - Which kinds of user the list covers (managed, home with an account, friends, PIN-protected) is verified before build (task 11.0) and recorded in the [Plex platform note](../platform-notes/plex.md).
 
 ## Triggers (each can be switched on or off)
 1. **Play or track change**
-   - Source: the websocket `playing` events. The session is resolved to its user.
+   - Source: the websocket `playing` events. An event names a session and a client but no user; the user is found by reading the server's session list with the owner's token. An event whose session is already gone is dropped.
    - If the streams changed, the preference is updated and the change is propagated.
-   - **Without playing** *(decided 2026-11-10)*: a track changed on an episode's page is picked up from Plex's activity events and treated the same way. Plex sends these from its web and desktop apps only. This has its own switch, off by default.
+   - **Without playing** *(decided 2026-11-10)*: a track changed on an episode's page is picked up from Plex's activity events (an item refresh that has ended, which names the user and the item) and treated the same way. Only PAL does this, and it reports that Plex sends these from its web and desktop apps only; both points are checked in task 11.0. This has its own switch, off by default.
 2. **New or upgraded episodes**
    - Detected through timeline and activity events, plus a part-key diff, as in PAL.
    - Each stored preference for that show is applied, separately for every user.
@@ -80,7 +83,7 @@ Plex only. Tofa has native per-profile language preferences, so PAL doesn't appl
 ## Execution
 - Websocket readers **only enqueue** work.
 - Work is serialised per (user, show) with a keyed queue, so there are no races.
-- Writes use `PUT /library/parts/{id}` with the user's token, and each write is **verified by reading it back**.
+- Writes use `PUT /library/parts/{id}` with the user's token and the audio or subtitle stream to select (subtitle 0 for none). Each part of a file is written by itself; Plex's "apply to all parts" switch is not used, because it lets the server pick a similar stream. Each write is **verified by reading it back** with the same user's token.
 - Writes go through the target's pacing in their own lane, behind scans, so a long show cannot hold up scan delivery.
 - An episode that already has the right tracks selected is not written.
 
@@ -99,7 +102,7 @@ This is the notification type this module raises (the catalogue is in [notificat
 8. Nothing is recorded or applied for a target that is switched off, an unticked library, a show excluded on the page, or a show carrying the ignore label; excluding a show keeps its stored preferences.
 9. Each trigger can be switched off on its own. The sweep visits only shows with a stored preference and episodes changed since the last sweep.
 10. A per-user scope override takes precedence over the default scope.
-11. A token that fails is refreshed once and the write retried; a user whose token cannot be obtained is shown and skipped.
+11. A token the server rejects with 401 is refreshed once and the write retried; a user for whom Plex returns no token is shown as not available and skipped, and the users with a token are unaffected.
 12. A re-added show keeps its preferences; a user without access for 30 days loses theirs.
 13. Applying a preference to a long show does not delay a scan queued for the same target.
 14. Every change made is listed in the history with user, show, from and to, and is removed after its retention time.
@@ -115,4 +118,4 @@ This is the notification type this module raises (the catalogue is in [notificat
 
 ## Open questions
 - Default scope (**decided 2026-10-27:** show + next, as in PAL).
-- Tokens for PIN-protected home users: to be verified (task 11.0).
+- Which user kinds get a token from Plex, and the without-playing event: to be verified live (task 11.0). Baseline from code and documentation is in the Plex platform note.

@@ -12,9 +12,9 @@ Narrow, typed, well-tested clients for every media-server target. Each client li
 ## Scope
 | Target | Scan | Libraries | Sessions | Parity | Tracks |
 |---|---|---|---|---|---|
-| Plex | `refresh?path=` per folder; verified empty trash | `/library/sections` with paging headers | websocket notifications | GUID match and fix | per-user part stream selection |
-| Jellyfin | batched `Media/Updated` (`Modified`) | `/Library/VirtualFolders` | websocket `SessionsStart` | provider IDs | none |
-| Emby | batched `Media/Updated` (`Created`) | `/emby/Library/SelectableMediaFolders` | websocket | provider IDs | none |
+| Plex | `refresh?path=` per folder; verified empty trash | `/library/sections` with paging headers | websocket `playing` events, each followed by a read of `/status/sessions` | GUID match and fix | per-user part stream selection |
+| Jellyfin | batched `Media/Updated` (`Modified`) | `/Library/VirtualFolders` | websocket `SessionsStart` (10.10 or newer), else polling `/Sessions` | provider IDs | none |
+| Emby | batched `Media/Updated` (`Created`) | `/emby/Library/SelectableMediaFolders` | websocket (provisional), else polling `/Sessions` | provider IDs | none |
 | Tofa | `POST /libraries/{id}/scan/scoped` (batched) | provisional (no library-roots endpoint yet) | websocket (required once documented), polling until then | `POST /media/{id}/match` | none |
 | Tdarr | `scan-files` | n/a | n/a | n/a | n/a |
 | Autoplow | generic trigger of another instance | n/a | n/a | n/a | n/a |
@@ -62,6 +62,11 @@ Behaviour each client must respect is recorded in `docs/platform-notes/`.
 
 ## Sessions
 - A websocket that drops reconnects with backoff. After three failed attempts the client polls every 10 s until the websocket is back, so the session count has no gap.
+- **What each connection needs** (details and evidence in the platform notes):
+  - Plex: the token as a header or query argument. The path every known client uses differs by one letter from the documented one; both are tried.
+  - Jellyfin: the key in the `Authorization` header. The `api_key` query argument is off by default from Jellyfin 12. A keep-alive message at least every 30 s, or the server closes the connection after 60 s.
+  - Emby: the key as a query argument, with a device id.
+- **A connection that delivers nothing** is caught by the periodic read described in the [throttle spec](throttle.md): if the read shows sessions the websocket never announced, the client falls back to polling for that target.
 
 ## Changes on the server
 - Library lists refresh periodically and on a lookup miss.
