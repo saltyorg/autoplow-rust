@@ -80,7 +80,7 @@ Provide the foundation every module builds on. A component can be restarted when
 - **Versions:** releases follow SemVer over the API, the bootstrap file and database upgrades. Going back to an older version is not supported (see the upgrade copy above).
 - **Observability:**
   - `tracing` logs with a level per component, with secrets redacted by type.
-  - **Where logs go** *(decided 2026-11-10)*: standard output, for the journal, and a log file. Autoplow rotates the file daily or at 50 MB and keeps the last 7 (configurable). Levels can be changed per component while running. There is no log viewer in the UI in v1.
+  - **Where logs go** *(decided 2026-11-10)*: standard output, for the journal, and a log file. Autoplow rotates the file daily or at 50 MiB and keeps the last 7 (configurable). Levels can be changed per component while running. There is no log viewer in the UI in v1.
   - Prometheus `/metrics`, which needs an API key of any scope; the metrics scope is made for it.
   - `/health`, open to anyone and answering only ok or not ok. The detail is on the Health page.
   - An SSE event stream. It does not replay missed events: after a reconnect the UI reloads what it shows. A client too slow to keep up is disconnected and reconnects.

@@ -148,6 +148,7 @@ Every page and dialog in v1, the module that owns it, what it shows and does, an
 - **Explanations go under the label,** on their own line, in the muted colour, and only where one is needed.
 - **A unit is part of the value:** `30 s`, `15 m`, `200 Mbps`. The field accepts the number alone and adds the unit. The exception is a value passed to rclone as a size or duration, where the unit must be typed (see the [rclone spec](rclone.md)).
 - **Transfer speeds and bandwidth limits are in MiB/s** (KiB/s below 1), the unit rclone uses. Stream bitrates are in Mbps.
+- **Sizes are in binary units** *(decided 2026-11-11)*: KiB, MiB, GiB and TiB, powers of 1024, for file sizes, free space, memory and any size a setting takes. A size and a speed on the same row then add up, and they match what rclone and the Arrs show. `MB` and `GB` are not used in the UI.
 - **One control per row.**
   - A detail that only matters while a switch is on is a **nested row** directly under the switch, indented, and shown only while the switch is on.
   - A number for which "off" means "no number" is a single field; leaving it empty switches it off, and the explanation says so.
