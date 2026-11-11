@@ -36,6 +36,14 @@ Run and supervise `rclone rcd` as a private child process, and give `upload`, `t
   - They are stored in Autoplow once per remote, so every destination that uses the remote gets the same values. `rclone.conf` is not changed, and a value here wins over the one in `rclone.conf`.
   - They are sent with each call that uses the remote. **Test** opens the remote with the options and reports rclone's answer.
   - **Remotes that wrap another** (crypt, alias, chunker, compress, hasher): options are set on the remote that talks to the provider, and Autoplow passes them through the wrapper. Members of a union or combine remote take their options from `rclone.conf` only.
+- **How values are written and sent** *(decided 2026-11-11; measured in the [platform note](../platform-notes/rclone.md))*: rclone reads the same text differently depending on where it arrives, and a number without a unit is never what it looks like. A size given as bare digits is read as KiB, so a byte count sent that way becomes 1024 times larger. So:
+  - Autoplow takes each option's type from rclone (size, duration, yes/no, whole number, text) and checks the value against it when it is saved.
+  - **A size needs a unit:** `Ki`, `Mi`, `Gi` or `Ti` (`K`, `M`, `G`, `T` mean the same). They are powers of 1024, as in rclone. A bare number is refused, with the question which unit was meant. `MB` and `GB` are refused too, as rclone refuses them.
+  - **A duration needs a unit:** `ms`, `s`, `m`, `h` or `d`. A bare number is refused.
+  - **Stored exactly:** a size as bytes, a duration as milliseconds. The field shows it back in the unit it was entered in (`64 Mi`).
+  - **Sent without room for a second reading:** a size as its byte count with rclone's byte suffix (`67108864B`), a duration with its unit (`150ms`). A size or duration is never sent as a bare number, whether as text or as a JSON number.
+  - **Yes/no and whole numbers** go as JSON values in a settings call and as text (`true`, `5`) inside a remote's address, because rclone accepts only those forms in each place.
+  - **Checked after sending** where rclone answers with the value: after a settings call Autoplow reads the option back, and after a bandwidth change it reads the rate in the reply. A difference is an error on the Health page, and the earlier value stays in force for the next attempt.
 - **The request limit** (`--tpslimit`): one optional ceiling for the whole daemon, off by default and shared by every remote. rclone cannot change it while running, so a new value restarts the child as described under "Restart" below.
 - **The config password:** stored like other secrets and given to the child in its environment, never on the command line.
 - **The config file:**
@@ -98,6 +106,8 @@ These are the notification types this module raises (the catalogue is in [notifi
 18. Two transfers to different folders of one remote share one request pacer: with a pacing option set on the remote, their combined request rate stays within it.
 19. An option set on the remote under a crypt remote applies to uploads made through the crypt remote.
 20. A bandwidth limit also limits a copy to a local-folder destination.
+21. For a table of sizes and durations in every accepted unit, including fractions, the value the running rclone reports back (settings, bandwidth) or uses (the chunk size of an upload to a test remote) equals the value entered, to the byte and to the millisecond.
+22. A size or duration without a unit, and a size in `MB` or `GB`, is refused when saved, with the reason; nothing is sent to rclone.
 
 ## Boundaries
 - **Always:** follow `CONSTRAINTS.md`.

@@ -90,6 +90,26 @@ Verified 2026-11-11 against rclone v1.75.1: a short-lived `rcd` on a unix socket
 - There is no limit per group, job or remote *(source)*. `BwLimitFile` in `_config` caps one transfer and is fixed when it starts.
 - **`--transfers` does not cap single-file jobs.** On a daemon started with `--transfers 1`, four async `operations/copyfile` jobs transferred at once. It sets the workers inside one `sync/*` job.
 
+### How values are parsed
+Verified 2026-11-11 against rclone v1.75.1. Global options were set with `options/set` and read back with `options/get`; a backend size option was observed as the chunk sizes written by a chunker remote over a local folder; `core/bwlimit` reports the rate it applied.
+
+| Sent | As a global option (`options/set`) | In a remote address | To `core/bwlimit` |
+|---|---|---|---|
+| `"32Mi"`, `"32M"`, `"32MiB"`, `"32mi"` | 32 MiB | 32 MiB | 32 MiB/s |
+| `"1.5Mi"` | 1 572 864 bytes | 1 572 864 bytes | 1 572 864 bytes/s |
+| `"32MB"` | error | error | error |
+| `"1 Mi"` (with a space) | not tested | error | not tested |
+| `"33554432"` (digits as text) | **32 GiB**: read as KiB | **read as KiB** | **read as KiB/s** |
+| `33554432` (JSON number) | 32 MiB: read as bytes | error: values must be text | not tested |
+| `"33554432B"` | 32 MiB | 32 MiB | 32 MiB/s |
+
+- **Sizes:** the unit letters are powers of 1024 with or without the `i`. Bare digits as text are KiB. A JSON number is bytes in `options/set` and is refused inside a remote address given as a JSON object. The `B` suffix is the one form read as bytes everywhere.
+- **Durations:** `"150ms"`, `"0.15s"`, `"5m"`, `"1h30m"` and `"2d"` are read as written. Bare digits as text are **seconds** (`"300"` is 5 minutes); a JSON number is **nanoseconds** (`300` is 300 ns).
+- **Yes/no:** `options/set` accepts only JSON `true` and `false`; `"true"`, `"yes"`, `1` are errors. Inside a remote address only the text `"true"` or `"false"` is accepted; JSON `true` and `"yes"` are errors.
+- **Whole numbers** inside a remote address must be text (`"5"`); a JSON number is an error.
+- `options/get` returns sizes as bytes and durations as nanoseconds. `options/info` and `config/providers` give each option's type (`SizeSuffix`, `Duration`, `bool`, `int`) and its default both as a number and as text (`16777216` and `16Mi`).
+- `core/bwlimit` answers with `bytesPerSecond`, so the applied rate can be compared with the intended one. `"off"` and `"0"` remove the limit.
+
 ### Options that run a program
 - sftp `ssh` (observed: the named program ran when the remote was opened) and the global `metadata_mapper` given in `_config` (observed).
 - *(source)* WebDAV `bearer_token_command`, `name_transform` in its command form, `password_command`.

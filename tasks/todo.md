@@ -438,15 +438,16 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** M.
 
 ### Task 5.2: Start on demand, runtime settings and Settings › rclone
-- [ ] **AC (rclone AC9, AC13–AC20; ui AC10: Settings › rclone and the Remote dialog):**
+- [ ] **AC (rclone AC9, AC13–AC22; ui AC10: Settings › rclone and the Remote dialog):**
   - The child runs only while a destination or a crypt Drive monitor needs it.
   - Settings are applied over the socket after every start and on change: options for every transfer, options per remote, job-status retention.
   - Options come from the allowed list, limited to what the running rclone reports; anything else is rejected when saved.
+  - Sizes and durations need a unit, are stored exactly, sent as a byte count with the byte suffix or with their unit, and read back.
   - Remotes are addressed by root, with their options, through wrappers too; a changed option or an edited remote is picked up by the next transfer.
   - `rclone.conf` is watched by folder to refresh the remote list; no restart.
   - Restart when idle (within an hour at most) for the request limit, config password and paths; Restart now.
   - Settings › rclone and the Remote dialog with Test.
-- **V:** integration tests against local WebDAV and crypt remotes: an option reaches one remote and not another, two folders share one pacer, an edited config is used by the next transfer while one runs; no child with nothing configured; Playwright plus axe.
+- **V:** integration tests against local WebDAV and crypt remotes: an option reaches one remote and not another, two folders share one pacer, an edited config is used by the next transfer while one runs; a table of sizes and durations round-trips exactly, with the chunk size observed on a chunker remote; no child with nothing configured; Playwright plus axe.
 - **Dep:** 5.1, 0.10.
 - **Files:** `crates/rclone/src/{demand,settings,remote}.rs`, `crates/ui/src/pages/settings/rclone.rs`.
 - **Size:** M.

@@ -33,6 +33,7 @@ Keep other traffic from degrading playback: adapt rclone's upload bandwidth and 
 
 ## Units
 - **Limits** are bytes per second, written the way rclone writes them: `80M` is 80 MiB/s. The UI shows them as MB/s.
+- **Sent to rclone as an exact byte count** with the byte suffix (`83886080B`), and the rate in rclone's reply must equal it. rclone reads bare digits as KiB/s, so a byte count without the suffix would be 1024 times too high (see the [rclone spec](rclone.md)).
 - **Stream bitrates** are bits per second (Mbit/s), as media servers report them.
 - By-bitrate mode converts between the two explicitly (8 bits to the byte). Every mixed calculation is covered by a test.
 - The lowest limit that can be set is 100 kB/s. Stopping is done by pausing or holding, never by a limit of zero.
