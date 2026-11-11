@@ -99,7 +99,7 @@ The detailed schema will be generated from the same Rust types the API uses, as 
   - **general:** callback base URL, Autoplow's own browser address (for links in notifications), trusted proxies, time zone, the update check switch, shared trigger credentials, the Arr reconcile interval, retention periods, backup schedule, log levels and log-file retention.
   - **scan:** minimum age and maximum wait defaults, dead-letter attempts.
   - **notifications:** the problem delay, delivery attempts, the grouping window.
-  - **rclone:** config path, which rclone, extra options and environment variables.
+  - **rclone:** config path, which rclone, the config password, the request limit, and the options for every transfer. Options for one remote are stored on the remote (`PUT /remotes/{name}/options`).
   - **uploads:** the global transfer cap, upload windows, fixing file dates, retry attempts, cooldown times, the stalled-transfer time.
   - **throttle:** what counts as a stream, the settling time, "no new uploads above N streams", and per client "pause above N streams".
   - **parity:** when to check, automatic fixes per server and finding type, the safety limit, match language, excluded pairs and finding types, retention.
@@ -126,7 +126,7 @@ No route under `/triggers` ever depends on a browser sign-in. A request under `/
   - `Authorization: Bearer <api key>` (scoped: admin, read-only, metrics).
   - The UI uses session cookies plus CSRF protection.
 - **Resources:**
-  - `targets`, `arrs`, `triggers`, `destinations`, `downloaders`, `limiters`, `remotes` (read-only, from `rclone.conf`), `notifications`, `anchors`, `rewrite-sets`, `gdrive/clients`, `gdrive/accounts`, `gdrive/monitors`, `api-keys`, `settings`
+  - `targets`, `arrs`, `triggers`, `destinations`, `downloaders`, `limiters`, `remotes` (from `rclone.conf`; only their options can be changed), `notifications`, `anchors`, `rewrite-sets`, `gdrive/clients`, `gdrive/accounts`, `gdrive/monitors`, `api-keys`, `settings`
   - Each supports `GET` (list), `GET /{name}`, `PUT /{name}` (idempotent upsert) and `DELETE /{name}`.
   - `PATCH` uses JSON merge patch.
 - **Lists:**
@@ -165,7 +165,8 @@ No route under `/triggers` ever depends on a browser sign-in. A request under `/
   - `GET /notifications/undelivered`; `POST /notifications/undelivered/{id}/resend`; `DELETE /notifications/undelivered[/{id}]` (all, or with `?channel=` one channel's)
   - `POST /notifications/{name}/test`
   - `POST /gdrive/accounts/connect` (start) and `GET /gdrive/accounts/connect/{id}` (result; admin only); `GET /gdrive/accounts/{name}/drives`; `GET /gdrive/redirect-check`
-  - `GET /rclone` (state and version); `POST /rclone/reload`
+  - `GET /rclone` (state, version, and whether a restart is pending); `POST /rclone/restart`
+  - `GET /rclone/options` (the options that can be set for every transfer, and per backend type for a remote, each with description and default); `GET` and `PUT /remotes/{name}/options`; `POST /remotes/{name}/test` (opens the remote with the given options)
   - `POST /downloaders/{name}/test`
   - `GET /throttle` (sessions and each limiter's current limit); `PUT /throttle/override` and `DELETE /throttle/override`
   - `GET /track-preferences/users`; `PATCH /track-preferences/users/{id}` (opt out, scope override); `DELETE /track-preferences/users/{id}/preferences` (clear all)

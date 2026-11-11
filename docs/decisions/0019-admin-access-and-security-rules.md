@@ -1,7 +1,7 @@
 # ADR-0019: Admin access is a shell, and the rules that follow
 
 ## Status
-Accepted. Amends [ADR-0007](0007-seed-once-bootstrap-and-rest-api.md) ("Secrets are write-only").
+Accepted. Amends [ADR-0007](0007-seed-once-bootstrap-and-rest-api.md) ("Secrets are write-only"). Amended by [ADR-0021](0021-rclone-settings-applied-at-runtime.md): rclone settings are now chosen from an allowed list, not filtered from free text.
 
 ## Date
 2026-11-10

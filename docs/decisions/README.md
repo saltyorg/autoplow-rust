@@ -22,5 +22,6 @@ Format: Status, Date, Context, Decision, Alternatives Considered, Consequences. 
 | [0016](0016-console-ui-direction.md) | Console visual direction and UI rules | Accepted |
 | [0017](0017-download-clients-module-and-stream-aware-limits.md) | Download clients as their own module, limited by stream activity | Accepted |
 | [0018](0018-host-service-deployment.md) | Autoplow runs as a service on the host | Accepted |
-| [0019](0019-admin-access-and-security-rules.md) | Admin access is a shell, and the rules that follow | Accepted |
+| [0019](0019-admin-access-and-security-rules.md) | Admin access is a shell, and the rules that follow | Accepted (amended by 0021) |
 | [0020](0020-what-a-target-can-see.md) | What a target can see decides when it is scanned | Accepted |
+| [0021](0021-rclone-settings-applied-at-runtime.md) | rclone settings are applied to the running daemon | Accepted |

@@ -36,11 +36,71 @@ Verified 2026-11-11 against rclone v1.75.1, with a short-lived `rcd` on a unix s
 - **Backend options on the `rcd` command line apply to backends created through the API.** With `--links` (or `--local-links`) on the command line, `operations/list` over the API returned the symlink as a `.rclonelink` entry; without it, the symlink was left out.
 - **The same options given as environment variables apply too** (`RCLONE_LOCAL_LINKS=true`, `RCLONE_TPSLIMIT=5`).
 - **A backend option given this way applies to every remote of that backend type.** A per-remote value belongs in `rclone.conf`, or in a connection string on the call (`:local,links=false:/path` overrode the daemon's `--links` for that call).
-- **Per-call `_config`** overrides a global option for that call only.
+- **Per-call `_config`** overrides a global option for that call only, with the exceptions listed under "What a running `rcd` accepts" below.
 - **`--tpslimit` is one limit for the whole daemon, shared by every backend.** Measured against a local WebDAV server: a recursive listing of 7 folders took 0.1 s without a limit and 6.0 s with `--tpslimit 1`; two such listings run at once through two separate backend instances took 14.0 s together, so they drew from one bucket. It cannot express a different rate for a different provider.
 - **Per-call `_config` cannot set it.** The same listing with `_config: {"TPSLimit": 1}` on a daemon started without a limit still took 0.1 s.
-- **An option can be set for one named remote on one call** by writing it into the remote part of the path: `name,option=value:path`. With `loc` and `loc2` both plain local remotes in the config, `loc,links=true:` listed the symlink while `loc:` and `loc2:` in the same daemon did not, and the config file was unchanged. This is how one remote can get its own backend options, including a backend's own pacing options, without editing `rclone.conf`.
+- **An option can be set for one named remote on one call** by writing it into the remote part of the path: `name,option=value:path`. With `loc` and `loc2` both plain local remotes in the config, `loc,links=true:` listed the symlink while `loc:` and `loc2:` in the same daemon did not, and the config file was unchanged. This is how one remote can get its own backend options, including a backend's own pacing options, without editing `rclone.conf`. The remote can also be given as a JSON object (`{"_name": "loc", "links": true}`), which leaves the quoting to rclone.
 - **Not verified here:** an option of a cloud backend such as Drive's chunk size, which needs a real remote to observe. It is registered and read the same way as the local backend's option, so the same result is expected, and the first live upload test should confirm it.
+
+## What a running `rcd` accepts
+Verified 2026-11-11 against rclone v1.75.1: a short-lived `rcd` on a unix socket with a scratch config, local `rclone serve webdav` and `rclone serve sftp` servers as remotes, and a crypt and an alias remote on top. Timing of a recursive listing (8 requests) shows pacing; the user agent seen by the server shows connection settings. Source read at v1.75.2 where marked *(source)*. No cloud remote was used, so everything about Drive, Dropbox and other cloud backends is *(source)*.
+
+### Global options
+- `options/set` writes the running value. It takes effect only where rclone reads the option again.
+- **Read when a transfer or job starts** (so they apply to the next one, not to one already running): `Transfers`, `Checkers`, `BwLimitFile`, and *(source)* `BufferSize`, the multi-thread options, the compare options and `LowLevelRetries` for the copy itself.
+- **Fixed when a remote is opened:** `UserAgent`, `Dump`, and *(source)* timeouts, HTTP/2, proxy, headers, certificates and the pacer's retry count. A remote already open keeps the old value.
+- **Read once at start; `options/set` changes nothing:**
+  - `TPSLimit` and `TPSLimitBurst`. A daemon started with `--tpslimit 2` kept that rate after `options/set` to 1000 and to 0, and one started without a limit stayed unlimited. No other call changes it.
+  - `BwLimit`. Only `core/bwlimit` changes the live limit.
+  - The remote cache's expiry times, and *(source)* `UseMmap` and `MaxBufferMemory`.
+- `LogLevel` and the `rc` block's `JobExpireDuration` apply at once. A finished job's status is dropped after 60 s by default.
+- `--retries` is not used by API operations at all *(source)*; the caller retries.
+
+### Per-call `_config` and `_filter`
+- `_config` gives the job a private copy of the global options. Two jobs running at once with different `Transfers`, or different `BwLimitFile`, each kept their own.
+- It does not affect `TPSLimit` or `BwLimit`, which are single buckets for the process.
+- **Connection settings in `_config` stick.** They are used by whichever call first opens the remote, and later calls get that remote from the cache with the first call's value, whatever they pass.
+- `_filter` applies to `sync/*`. `operations/copyfile` and `movefile` name one file and use no filter *(source)*.
+- Since 1.75.0, a top-level parameter named like a global flag is read as config, so a client must send no stray parameters.
+
+### Options for one remote
+- **Precedence, highest first:** the remote address on the call; a backend flag or `RCLONE_<BACKEND>_<OPTION>` variable on the daemon; `RCLONE_CONFIG_<REMOTE>_<OPTION>`; `rclone.conf`; the default. The second and third are the other way round in rclone's documentation. So a backend option given to the daemon overrides the per-remote values in `rclone.conf`.
+- **`override.<global option>`** (rclone 1.71 and later) in a remote's address or config section gives that remote its own value for anything fixed when a remote is opened: user agent, timeouts, `max_connections`, low-level retries. It works through `rcd`. It cannot give a remote its own `tpslimit` or bandwidth limit.
+- **Unknown option names are ignored silently** in a remote address, in `override.*` and in `_config`. Only a bad value is an error. `config/providers` and `options/info` list the names the running rclone knows.
+- **A remote that wraps another does not pass options down.** A pacing option on a crypt remote had no effect; the same option written into the crypt remote's `remote` value (`cr,remote="wd,pacer_min_sleep=500ms:crypt":`) did.
+- `backend/command` with Drive's `set` writes into `rclone.conf` *(source)*.
+
+### One opened remote, one pacer
+- rclone keeps opened remotes in a cache, keyed by name, overridden backend options and root path. An entry expires 5 minutes after last use; a running job keeps its own alive.
+- Options are read once, when the remote is opened.
+- **Each cache entry has its own request pacer.** Two listings through one root shared a pacer (7.5 s); the same two addressed as two sub-folders ran at twice the rate (4.0 s). Addressing a remote by its root, with the whole path in the file argument, keeps one pacer per remote.
+- **`override.*` values are not part of the key.** If the plain remote is already cached, an address that differs only in `override.*` gets the cached one. A differing backend option does make a new entry; `description` exists on every backend and can serve as that difference.
+- `fscache/clear` empties the cache. Transfers already running finished normally on WebDAV and SFTP. It also shuts a backend down where the backend has a shutdown step; for Dropbox that ends its batch committer *(source)*, so clearing while Dropbox uploads run is not safe.
+- **Tunable pacing** *(source)*: Drive (`pacer_min_sleep`, `pacer_burst`), Dropbox and WebDAV (`pacer_min_sleep`), Zoho. OneDrive, B2, S3, Box, Google Cloud Storage and Azure Blob have fixed values. WebDAV's was measured: 500 ms on one remote made its listing take 4.0 s while two other remotes stayed at 0.09 s.
+- `override.max_connections=2` held four concurrent uploads to two at a time on WebDAV. rclone's documentation warns that the option can deadlock.
+
+### `rclone.conf` changes
+- rclone checks the file's size and modification time on every config access and re-reads it when they differ. No call is needed.
+- A remote added by another process was listed by `config/listremotes` and usable at once. An edited remote kept its old values while cached and used the new ones once opened afresh. A removed remote failed the next time it was opened.
+- rclone saves a renewed token by writing a new file and renaming it over the old one, so a watcher must watch the folder.
+- **Encrypted config:** the key is kept after the first read, so later re-reads need no password. After the password was changed by another process, config calls failed until `config/unlock` was called, and the file was not re-read until it changed again.
+
+### Bandwidth and concurrency
+- `core/bwlimit` takes one value or `up:down`, not a timetable. With `2M:off`, an upload was held to 2 MiB/s, but a copy between local folders was not limited at all; with `2M` it was.
+- There is no limit per group, job or remote *(source)*. `BwLimitFile` in `_config` caps one transfer and is fixed when it starts.
+- **`--transfers` does not cap single-file jobs.** On a daemon started with `--transfers 1`, four async `operations/copyfile` jobs transferred at once. It sets the workers inside one `sync/*` job.
+
+### Options that run a program
+- sftp `ssh` (observed: the named program ran when the remote was opened) and the global `metadata_mapper` given in `_config` (observed).
+- *(source)* WebDAV `bearer_token_command`, `name_transform` in its command form, `password_command`.
+
+### Cost of more processes
+- An idle `rcd` used about 65 MB, and about 130 MB during four concurrent uploads. A single `rclone copyto` used about 83 MB mid-transfer. `rcd` answered its first call about 0.1 s after start.
+
+### Still to confirm on a real remote
+- Drive and Dropbox chunk and pacing options through a remote address, and the error a Drive upload returns with `stop_on_upload_limit`.
+- Dropbox batch commits with one job per file.
+- Token renewal with one OAuth remote opened twice in the daemon beside a mount using the same config.
 
 ## Signal handling hazard (any process that runs rclone code in-process)
 - `lib/atexit` installs `signal.Notify(SIGINT, SIGTERM)` the first time anything calls `atexit.Register`.

@@ -75,7 +75,7 @@ Keep other traffic from degrading playback: adapt rclone's upload bandwidth and 
 - An outlier reading is logged once per session.
 
 ## Effects
-- **rclone:** the limit is applied through rclone `core/bwlimit`. Bandwidth is shared by every transfer, as with the rclone CLI.
+- **rclone:** the limit is applied through rclone `core/bwlimit`, as one value for both directions, so it also covers a copy to a local or NFS folder. Bandwidth is shared by every transfer, as with the rclone CLI.
 - **Download clients:** the limits are handed to the `downloaders` module, which applies them and keeps them applied. The throttle never calls a client itself.
 - Optionally, no new uploads start above N streams. Throttle places a hold on uploads (see the upload spec) and lifts it when the count drops; transfers already running continue, throttled. The setting is with the counting options on the Throttle page.
 - A limiter whose rclone or client is unavailable (rclone restarting, a client unreachable) does not hold up the others.

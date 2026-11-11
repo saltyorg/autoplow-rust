@@ -64,9 +64,11 @@ This consolidates the upload decisions in the ADRs in [../decisions/](../decisio
 - **Concurrency:**
   - A global transfer cap, plus an optional cap per remote.
   - Bandwidth is always global through rclone `core/bwlimit`, the same behaviour as the rclone CLI.
+  - rclone's own transfer count does not cap single-file transfers, so both caps are enforced here.
+- **rclone options for a remote** (chunk size, request pacing, stopping at the upload limit) belong to the remote, not the destination, so two destinations on one remote cannot disagree. They are set in the remote's dialog under Settings › rclone, which a destination's remote row links to; see the [rclone spec](rclone.md).
 - **Failover:**
   - Decided by **remote health**.
-  - A remote with repeated failures, or a quota or upload-limit error (for example exit code 7 semantics or `--drive-stop-on-upload-limit`), gets a cooldown.
+  - A remote with repeated failures, or a quota or upload-limit error, gets a cooldown. For Drive, the remote's "stop at the upload limit" option makes rclone report the limit as an error at once.
     - Upload limit or quota: 24 hours (configurable per remote).
     - Five failures in a row: 15 minutes, doubling to at most 6 hours, reset by a success.
   - When every remote of a destination is cooling down, its files wait and `remote.quota` or `remote.unhealthy` is raised.
