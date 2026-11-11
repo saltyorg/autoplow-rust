@@ -37,6 +37,9 @@ Verified 2026-11-11 against rclone v1.75.1, with a short-lived `rcd` on a unix s
 - **The same options given as environment variables apply too** (`RCLONE_LOCAL_LINKS=true`, `RCLONE_TPSLIMIT=5`).
 - **A backend option given this way applies to every remote of that backend type.** A per-remote value belongs in `rclone.conf`, or in a connection string on the call (`:local,links=false:/path` overrode the daemon's `--links` for that call).
 - **Per-call `_config`** overrides a global option for that call only.
+- **`--tpslimit` is one limit for the whole daemon, shared by every backend.** Measured against a local WebDAV server: a recursive listing of 7 folders took 0.1 s without a limit and 6.0 s with `--tpslimit 1`; two such listings run at once through two separate backend instances took 14.0 s together, so they drew from one bucket. It cannot express a different rate for a different provider.
+- **Per-call `_config` cannot set it.** The same listing with `_config: {"TPSLimit": 1}` on a daemon started without a limit still took 0.1 s.
+- **An option can be set for one named remote on one call** by writing it into the remote part of the path: `name,option=value:path`. With `loc` and `loc2` both plain local remotes in the config, `loc,links=true:` listed the symlink while `loc:` and `loc2:` in the same daemon did not, and the config file was unchanged. This is how one remote can get its own backend options, including a backend's own pacing options, without editing `rclone.conf`.
 - **Not verified here:** an option of a cloud backend such as Drive's chunk size, which needs a real remote to observe. It is registered and read the same way as the local backend's option, so the same result is expected, and the first live upload test should confirm it.
 
 ## Signal handling hazard (any process that runs rclone code in-process)
