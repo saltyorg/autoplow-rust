@@ -37,13 +37,13 @@ Autoplow is a single daemon that keeps a Saltbox media stack consistent and movi
 **Scale targets** (a large home server; derived from a real install, with headroom):
 | Dimension | v1 must handle comfortably |
 |---|---|
-| Media under management | ≥ 300 TB |
+| Media under management | ≥ 300 TiB |
 | Media servers | ≥ 3 (Plex, Tofa and one of Jellyfin/Emby concurrently) |
 | Arr instances | ≥ 8 (several Sonarr and Radarr variants, plus Lidarr for scans) |
 | Library size | ≥ 500 000 items per server |
 | Webhook and trigger events | ≥ 20 000 per day, with bursts of ≥ 1 000 per minute |
-| Upload volume | ≥ 10 TB per day across remotes |
-| Daemon resource use | ≤ 256 MB RSS steady-state for Autoplow itself (excluding the rclone child), ≤ 5 % of one CPU core when idle |
+| Upload volume | ≥ 10 TiB per day across remotes |
+| Daemon resource use | ≤ 256 MiB RSS steady-state for Autoplow itself (excluding the rclone child), ≤ 5 % of one CPU core when idle |
 
 ## Tech stack
 Decided in ADR-0003 to ADR-0006 and ADR-0008:

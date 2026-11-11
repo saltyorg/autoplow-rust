@@ -158,7 +158,7 @@ These are the notification types this module raises (the catalogue is in [notifi
 23. A file removed locally by Autoplow's own move produces no delete event from any trigger.
 24. While an anchor is missing, a walk reports no deletes under it, and the "path must exist" hour does not run for entries held by an anchor or by their target.
 25. An entry holding a delete and an add is sent as an add, with empty trash afterwards on Plex when that is enabled.
-26. A trigger body above 1 MB or naming more than 1000 paths is refused, and one trigger filling its own backlog share does not cause 503 for another.
+26. A trigger body above 1 MiB or naming more than 1000 paths is refused, and one trigger filling its own backlog share does not cause 503 for another.
 
 ## Boundaries
 - **Always:** follow `CONSTRAINTS.md`; validate external input at the boundary.

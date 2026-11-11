@@ -43,7 +43,7 @@ Behaviour each client must respect is recorded in `docs/platform-notes/`.
 
 ## Talking to a server
 - **Pacing:** one scan request at a time per target, with a gap between them (default 1 s). Both are adjustable per target. A batched call counts as one request.
-- **Timeouts and size:** as the core outbound client sets them (10 s to connect, 30 s for an answer, 4 MB per response), adjustable per target. Library and item listings are always fetched in pages.
+- **Timeouts and size:** as the core outbound client sets them (10 s to connect, 30 s for an answer, 4 MiB per response), adjustable per target. Library and item listings are always fetched in pages.
 - **Lanes:** a target handles one request at a time. Waiting requests are served in this order: scans, parity fixes, track-preference writes, then parity listings and post-delivery checks. After ten requests in a row from one lane, one from the next waiting lane goes through, so nothing waits forever. The status probe and reading sessions are not paced. The gap between requests applies to scans only. Refreshing the library list and polling for Plex empty trash travel with scans; a track-preference read or read-back travels with its write. Parity's own rate for fixes is a ceiling on its lane, not a second queue.
 
 ## Health
@@ -75,7 +75,7 @@ These are the notification types this module raises (the catalogue is in [notifi
 1. Each client passes contract tests against recorded fixtures, covering every request it makes and every response shape it parses, including error and `Retry-After` cases.
 2. **Through the core outbound client** (core AC20), every target call has:
    - Bounded timeouts.
-   - A response size cap (4 MB default).
+   - A response size cap (4 MiB default).
    - `Retry-After` honoured.
    - Errors classified as retry, target backoff or per-path dead-letter.
 3. Library lists refresh periodically and on a lookup miss. A library added on the server is used without restarting Autoplow.

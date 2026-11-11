@@ -36,7 +36,7 @@ Provide the foundation every module builds on. A component can be restarted when
   - **Backups** *(decided 2026-11-10)*: a failed backup raises `backup.failed`. A consistent copy daily, keeping the last 7 (both configurable), plus on demand from the UI and API. Copies live in the data directory. **Rebuildable data** (Drive snapshots, cached library lists) is left out of every copy, so backups stay small; it stays in the same database so that it can be updated in one transaction with the work it belongs to.
   - **Restoring** *(decided 2026-11-10)*: `autoplow restore <file>`, run on the host as the service user while the service is stopped. It checks that the file is a consistent Autoplow database, refuses one from a newer version, keeps a copy of the current database first, and upgrades an older backup on the next start. Nothing in the UI or API can replace the database.
   - **When the database can't be written** (disk full, read-only): incoming triggers are refused with 503 and `Retry-After`, never accepted and lost. The Health page shows the cause, and work resumes on its own when writing succeeds again.
-  - **Low disk space:** Autoplow keeps a small reserve in the data directory (64 MB, not configurable) and gives it up when the disk fills, so it can go on recording what uploads do; uploads are what frees space. A backup that would not fit is skipped and reported as `backup.failed`. A transfer whose result cannot be recorded is checked against the remote at the next start before its file is touched again.
+  - **Low disk space:** Autoplow keeps a small reserve in the data directory (64 MiB, not configurable) and gives it up when the disk fills, so it can go on recording what uploads do; uploads are what frees space. A backup that would not fit is skipped and reported as `backup.failed`. A transfer whose result cannot be recorded is checked against the remote at the next start before its file is touched again.
   - **After a restore:** notifications still waiting to be sent that are older than the restore are discarded, not sent; sessions are cleared; Autoplow's record of having paused a download client is cleared; Drive monitors rebuild their snapshots. The secret key is checked against the restored file by the command itself.
 - **Time:**
   - Waits and backoff that live only in memory are measured on a clock that never jumps. Anything that must survive a restart (a cooldown, a manual override, a session, a file's first-seen time, retention) is stored as a wall-clock time. Scheduled times use the wall clock.
@@ -68,7 +68,7 @@ Provide the foundation every module builds on. A component can be restarted when
     - Lists don't show secrets; the API keys list has a **Copy** button per key.
 - **Outbound HTTP client** *(moved here from the targets spec 2026-11-10; every module that calls another service uses it)*:
   - Timeouts: 10 s to connect, 30 s for an answer, adjustable per connection.
-  - A response size cap (4 MB by default); anything that can be larger is read in pages.
+  - A response size cap (4 MiB by default); anything that can be larger is read in pages.
   - `Retry-After` honoured.
   - Certificate checking on by default, with a per-connection switch.
   - Errors classified as retry later, back off the whole connection, or fail this one item.
@@ -107,7 +107,7 @@ Provide the foundation every module builds on. A component can be restarted when
 - **What counts as a secret:** tokens, passwords and API keys of every connection; webhook header values; Apprise and webhook URLs; shared trigger credentials; values of rclone environment variables; Plex user tokens (these are never shown). A connection URL (a target, an Arr, a download client) with a user name or password in it is refused; the credentials go in their own fields. Apprise and webhook URLs may carry them and are stored whole as secrets.
 - **Triggers:**
   - The token is checked before the body is read. Failed attempts are slowed per client address.
-  - A body is at most 1 MB and names at most 1000 paths.
+  - A body is at most 1 MiB and names at most 1000 paths.
   - Back-pressure is counted per trigger as well as overall, so one noisy sender cannot shut out the others.
   - A query-string token is accepted only where the sender cannot send a header (the legacy routes and Bazarr).
 - **Outbound calls:** redirects are not followed, so a token is never sent to a host the admin did not enter.
@@ -136,7 +136,7 @@ These are the notification types this module raises (the catalogue is in [notifi
    - overlapping rules rejected
 6. API keys work only with the correct scope. A wrong key gets 401, a read-only key on a write endpoint gets 403, and a read-only key asking for any secret gets 403. A regenerated key replaces the old one immediately. The fifth wrong password locks sign-in for 1 minute, doubling to at most 15 minutes.
 7. No log line, metric label or API response contains a secret (test that greps output under a seeded secret). The one exception is the admin-only endpoints that return a stored secret when it is asked for.
-8. Steady-state RSS with an empty configuration is ≤ 64 MB, and idle CPU is ≤ 1 % of one core.
+8. Steady-state RSS with an empty configuration is ≤ 64 MiB, and idle CPU is ≤ 1 % of one core.
 9. The UI shell passes the Playwright login test and has zero serious or critical axe violations.
 10. Without `AUTOPLOW_SECRET_KEY`, or with a wrong one, Autoplow refuses to start and changes nothing. Starting with a new key and the old one in `AUTOPLOW_SECRET_KEY_OLD` re-encrypts every secret, and the old key then no longer works.
 11. Every request under `/api/v1` without a session or a key gets 401 (except signing in, first-start setup, the Google callback and the OpenAPI document), and a trigger route without its token is refused; no setting changes that.

@@ -117,7 +117,7 @@ These are the notification types this module raises (the catalogue is in [notifi
 8. Outside a schedule window no new transfer starts; transfers in flight finish.
 9. Hardlinked files follow the destination's policy (upload, reported as 'space not reclaimed', or defer while `nlink > 1`).
 10. A pausable download client is asked to pause while uploads are active and when free space is below its threshold, and the request ends after the grace period or when space recovers. (Resume guarantees: downloaders AC2, AC6.)
-11. Sustained 10 TB/day across remotes completes without Autoplow exceeding its resource budget (project.md).
+11. Sustained 10 TiB/day across remotes completes without Autoplow exceeding its resource budget (project.md).
 12. With "hold new uploads" on, no new transfer starts, transfers in flight complete, and the hold is still on after a daemon restart.
 13. Stopping a transfer (one or all) leaves the source intact and re-queues the file; nothing is left at the destination.
 14. A file whose scan cannot be sent uploads after the configured wait, marked as not scanned first; a disabled target causes no wait.

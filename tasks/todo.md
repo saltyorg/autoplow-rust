@@ -118,7 +118,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
   - `secrecy`-typed secrets.
   - `/metrics`.
   - An SSE broker that never blocks a publisher.
-  - Idle RSS ≤ 64 MB and CPU ≤ 1 %.
+  - Idle RSS ≤ 64 MiB and CPU ≤ 1 %.
 - **V:** broker back-pressure test; an idle soak measured under a cap.
 - **Dep:** 0.6.
 - **Files:** `crates/core/src/{obs,events}/*.rs`.
@@ -620,7 +620,7 @@ Aligned with the approved capability map (`docs/specs/README.md`). Each task nam
 - **Size:** M.
 
 ### Task 8.7: Upload soak and load test
-- [ ] **AC (upload AC11; project scale):** sustained throughput equivalent to 10 TB per day against a local/crypt test remote, within the resource budget.
+- [ ] **AC (upload AC11; project scale):** sustained throughput equivalent to 10 TiB per day against a local/crypt test remote, within the resource budget.
 - **V:** capped soak; results summarised.
 - **Dep:** 8.4.
 - **Files:** `crates/upload/tests/soak.rs`.
