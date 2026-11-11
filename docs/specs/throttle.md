@@ -32,11 +32,11 @@ Keep other traffic from degrading playback: adapt rclone's upload bandwidth and 
 - **At start,** throttle places its hold on uploads until the first reading of stream counts, for at most 30 seconds, so nothing uploads unthrottled while people are watching.
 
 ## Units
-- **Limits** are bytes per second, written the way rclone writes them: `80M` is 80 MiB/s. The UI shows them as MB/s.
+- **Limits** are bytes per second, written the way rclone writes them: `80M` is 80 MiB/s. The UI shows and accepts them in the same unit, labelled MiB/s *(decided 2026-11-11)*, and shows transfer speeds in it too, so a speed can be compared with its limit. A download client's limit is converted exactly to the unit its API takes.
 - **Sent to rclone as an exact byte count** with the byte suffix (`83886080B`), and the rate in rclone's reply must equal it. rclone reads bare digits as KiB/s, so a byte count without the suffix would be 1024 times too high (see the [rclone spec](rclone.md)).
 - **Stream bitrates** are bits per second (Mbit/s), as media servers report them.
 - By-bitrate mode converts between the two explicitly (8 bits to the byte). Every mixed calculation is covered by a test.
-- The lowest limit that can be set is 100 kB/s. Stopping is done by pausing or holding, never by a limit of zero.
+- The lowest limit that can be set is 100 KiB/s. Stopping is done by pausing or holding, never by a limit of zero.
 
 ## Settling
 - A change that **lowers** a limit is applied at once.
@@ -101,7 +101,7 @@ These are the notification types this module raises (the catalogue is in [notifi
 12. When a server becomes unreadable its streams stop counting at once, and the page marks that server's count as assumed.
 13. A limit is lowered within 5 s of a stream starting, and raised only after the count has stayed lower for the settling time; a pause followed by a resume within that time causes no change.
 14. A manual override replaces every limiter's result for its duration, ends by itself, and is still in force after a restart within that time.
-15. By-bitrate results match hand-calculated values for a table mixing Mbit/s bitrates and MiB/s limits; a limit below 100 kB/s is refused.
+15. By-bitrate results match hand-calculated values for a table mixing Mbit/s bitrates and MiB/s limits; a limit below 100 KiB/s is refused; a limit entered as 80 MiB/s reaches rclone as 83 886 080 bytes per second.
 16. A client set to pause above N streams is paused within 5 s of the count going above N and resumed only after it has stayed at or below N for the settling time. At start, no upload begins before the first reading of stream counts or 30 s, whichever is first.
 17. A websocket that drops while polling still answers changes no limit; a server whose connection and poll both fail counts as zero at once.
 

@@ -146,7 +146,8 @@ Every page and dialog in v1, the module that owns it, what it shows and does, an
 - **A field with its label above it,** spanning the width: used for long text (a URL, a path, a name, a list of patterns).
 - **Nothing follows a control.** No unit, hint or explanation sits to the right of a field, a choice or a tick box.
 - **Explanations go under the label,** on their own line, in the muted colour, and only where one is needed.
-- **A unit is part of the value:** `30 s`, `15 m`, `200 Mbps`. The field accepts the number alone and adds the unit.
+- **A unit is part of the value:** `30 s`, `15 m`, `200 Mbps`. The field accepts the number alone and adds the unit. The exception is a value passed to rclone as a size or duration, where the unit must be typed (see the [rclone spec](rclone.md)).
+- **Transfer speeds and bandwidth limits are in MiB/s** (KiB/s below 1), the unit rclone uses. Stream bitrates are in Mbps.
 - **One control per row.**
   - A detail that only matters while a switch is on is a **nested row** directly under the switch, indented, and shown only while the switch is on.
   - A number for which "off" means "no number" is a single field; leaving it empty switches it off, and the explanation says so.
