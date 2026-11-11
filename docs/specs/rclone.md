@@ -28,6 +28,7 @@ Run and supervise `rclone rcd` as a private child process, and give `upload`, `t
   - **Its output** goes to Autoplow's log under the `rclone` component, at that component's level.
 - **Options** *(decided 2026-11-10)*:
   - The admin can give extra command-line options and environment variables for the child (chunk sizes, API pacing, a config password, a user agent). Values that are secrets are stored like other secrets. `RCLONE_CONFIG_PASS` is allowed; it is the password, not the location, of the config.
+  - Options given to the child apply to the transfers Autoplow starts through its API, both global options and backend options; this is verified in the [platform note](../platform-notes/rclone.md). A backend option applies to every remote of that backend type; a value for one remote belongs in `rclone.conf`.
   - Autoplow refuses the options it must control itself, when they are saved, and says why. The list is under "Options that are refused" below.
 - **The config file:**
   - Autoplow never writes to `rclone.conf`. rclone itself saves refreshed tokens there, so the file must be writable by the service's account. Other rclone processes on the host (a mount) may use the same file.

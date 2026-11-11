@@ -29,6 +29,16 @@ Verified 2026-10-27 against rclone v1.75.1 and v1.75.2: live spikes plus source 
   - **All job state is lost.** After a restart, `job/status` for the old id returns "job not found", so the host must re-queue from its own state.
 - **Signal isolation:** rclone's signal handling (below) stays inside the child.
 
+## Options given to `rcd` and operations started through its API
+Verified 2026-11-11 against rclone v1.75.1, with a short-lived `rcd` on a unix socket and an empty config. The observable used was the local backend's `--links` option, which changes what `operations/list` returns for a symlink, and `options/get` for global options.
+
+- **Global options on the `rcd` command line apply to API operations.** `--tpslimit 8 --transfers 2` show in `options/get` as the daemon's running values.
+- **Backend options on the `rcd` command line apply to backends created through the API.** With `--links` (or `--local-links`) on the command line, `operations/list` over the API returned the symlink as a `.rclonelink` entry; without it, the symlink was left out.
+- **The same options given as environment variables apply too** (`RCLONE_LOCAL_LINKS=true`, `RCLONE_TPSLIMIT=5`).
+- **A backend option given this way applies to every remote of that backend type.** A per-remote value belongs in `rclone.conf`, or in a connection string on the call (`:local,links=false:/path` overrode the daemon's `--links` for that call).
+- **Per-call `_config`** overrides a global option for that call only.
+- **Not verified here:** an option of a cloud backend such as Drive's chunk size, which needs a real remote to observe. It is registered and read the same way as the local backend's option, so the same result is expected, and the first live upload test should confirm it.
+
 ## Signal handling hazard (any process that runs rclone code in-process)
 - `lib/atexit` installs `signal.Notify(SIGINT, SIGTERM)` the first time anything calls `atexit.Register`.
 - `fs/operations/copy.go` does this for any copy that uses a partial file (destinations with partial-upload support, for example local and sftp). The hook stays for the life of the process.
