@@ -20,6 +20,7 @@ Start with `docs/README.md`.
 - The lint and CI policy in `docs/quality-policy.md` is enforced workspace-wide.
 - **Fix the code, not the lint.** `#[allow]` is forbidden. A truly justified exception uses `#[expect(lint, reason = "...")]`, needs a row in the CONSTRAINTS.md Exceptions table, and must be called out in review.
 - **Never** lower thresholds, delete or skip tests, or relax the toolchain pin or lints without an ADR.
+- **Reviewers also check Microsoft's Pragmatic Rust Guidelines** (https://microsoft.github.io/rust-guidelines/agents/all.txt). A `SubagentStart` hook (`.claude/hooks/reviewer-guidelines.sh`) caches the text under `target/agent-guides/` and points the `agent-skills:code-reviewer` and `agent-skills:security-auditor` agents at it; it is not given to the authoring agent. Findings cite the guideline id (`M-...`). This file, `CONSTRAINTS.md`, `docs/quality-policy.md` and the specs win where they conflict.
 
 ## Public repository rules ([ADR-0015](docs/decisions/0015-public-documentation-rules.md))
 - **Never commit environment-specific details:** hostnames, IPs, domains, user names, machine-specific paths, credential sources or files, tokens, raw test output, or session logs.

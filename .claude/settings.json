@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "SubagentStart": [
+      {
+        "matcher": "^(agent-skills:code-reviewer|agent-skills:security-auditor)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/reviewer-guidelines.sh",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}
