@@ -57,9 +57,7 @@ Talk to the user's download clients and be the **single owner** of what Autoplow
   - **qBittorrent** reports its alternative-speed mode and whether its scheduler is on.
   - **SABnzbd and NZBGet** have no such flag. A change shows only as a limit or pause state that differs from what Autoplow set.
 - **Rule:** an override is reported as a `downloader.error` with a clear message, and the mode is left alone. Autoplow never switches a client's modes on or off.
-- **qBittorrent's alternative mode:** while it is on, the ordinary limit calls change the alternative limits, not the normal ones.
-  - Before 5.3.0, Autoplow sends no limit while the mode is on, and reports the override.
-  - From 5.3.0, Autoplow sets the normal limits through the call that names all four limits, sending the alternative ones back unchanged.
+- **qBittorrent's alternative mode** *(decided 2026-11-11)*: while it is on, the ordinary limit calls change the alternative limits, not the normal ones. So on every version Autoplow sends no limit while the mode is on, and reports the override. When the mode goes off, the next reconcile applies the current limit.
 - **A client restart** can drop the limit: SABnzbd does not keep a limit set through its API. The next reconcile puts it back.
 
 ## Failures
