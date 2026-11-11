@@ -12,7 +12,7 @@ cd "$root"
 # Files to scan: everything tracked or untracked except build output.
 mapfile -t files < <(find . -type f \
   -not -path './.git/*' -not -path '*/target/*' -not -path '*/node_modules/*' \
-  -not -path './.claude/*' \
+  -not -path './.claude/settings.local.json' -not -path './.claude/worktrees/*' \
   \( -name '*.md' -o -name '*.rs' -o -name '*.toml' -o -name '*.yml' -o -name '*.yaml' \
      -o -name '*.json' -o -name '*.sh' -o -name '*.html' -o -name '*.mjs' -o -name '*.js' \))
 

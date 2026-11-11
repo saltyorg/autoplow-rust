@@ -29,7 +29,7 @@ This file is the project's quality bar. Every row names the command that produce
 | UI bundle | **Leptos WASM ≤ 150 KiB gzip** | `trunk build --release` then `scripts/check-wasm-budget.sh 150` | task end, CI | The measured baseline for a small page was 83 KB. 150 KiB (153 600 bytes, [ADR-0022](docs/decisions/0022-sizes-in-binary-units.md)) leaves room for the full admin UI while catching dependency bloat |
 | Accessibility | **Zero serious or critical** axe violations on every UI page | Playwright with `@axe-core/playwright` (tags `wcag2a`, `wcag2aa`, `wcag21aa`) against the locally served UI | task end, CI | External opinion (WCAG). Moderate and minor findings are reviewed, not blocked |
 | Public docs | No environment details; no broken relative links | `scripts/check-public-docs.sh`, `scripts/check-links.sh` | every commit, CI | [ADR-0015](docs/decisions/0015-public-documentation-rules.md) |
-| Commit messages | Conventional Commits | `scripts/check-commit-messages.sh` | CI | Releases and the changelog are generated from them (release-please) |
+| Commit messages | Conventional Commits, and a `Review:` line in the body of every commit made after the rule ([ADR-0023](docs/decisions/0023-fresh-context-review-of-every-change.md)) | `scripts/check-commit-messages.sh` | task end, CI | Releases and the changelog are generated from them (release-please); the `Review:` line records that a fresh-context review ran and what came of it |
 
 **Tool availability:**
 - **Available now:** the floor guard, the public-docs, link and commit-message checks, and the docs CI.
