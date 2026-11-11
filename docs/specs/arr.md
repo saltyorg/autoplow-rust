@@ -38,7 +38,7 @@ Talk to every Arr instance correctly: receive and parse their webhooks, and keep
 |---|---|
 | Name | `Autoplow (Managed)`, Prowlarr-style |
 | Implementation | `Webhook`, method POST |
-| URL | `<callback base>/triggers/<trigger-id>`. The callback base is global, with an optional per-Arr override. |
+| URL | `<callback base>/triggers/<trigger-id>`, where the ID is the trigger's random UUID, not its name. The callback base is global, with an optional per-Arr override. |
 | Headers | `X-Api-Key: <per-instance token>` and `X-Autoplow-Instance: <uuid>` (fingerprint) |
 | Tags | `[]`. Tags would silently filter out events. |
 | Events (fixed) | **Sonarr / Whisparr v2:** onDownload, onUpgrade, onImportComplete, onRename, onSeriesDelete, onEpisodeFileDelete, onEpisodeFileDeleteForUpgrade. **Radarr / Whisparr v3:** onDownload, onUpgrade, onRename, onMovieDelete, onMovieFileDelete, onMovieFileDeleteForUpgrade. **Lidarr:** onReleaseImport, onUpgrade, onRename, onTrackRetag, onArtistDelete, onAlbumDelete. |

@@ -88,9 +88,9 @@ The detailed schema will be generated from the same Rust types the API uses, as 
 
 ## Resource model
 *(decided 2026-11-10)*
-- **Identity:** every resource has a fixed internal ID and a unique, changeable name.
+- **Identity:** every resource has a fixed internal ID and a unique, changeable name. The ID is a random UUID generated when the resource is created; it is never derived from the name and never chosen by the admin.
   - The API addresses a resource by name. A rename changes only the name: its queue, history and every reference follow it.
-  - Addresses given to other systems (an Arr's webhook URL) use the ID, so a rename never breaks them.
+  - Addresses given to other systems (an Arr's webhook URL, the address a webhook trigger gives its caller) use the ID, so a rename never breaks them and the address cannot be guessed from the trigger's name. The only name-based trigger addresses are the fixed legacy routes.
 - **An Arr is one resource.** An `arrs` entry carries its connection and its trigger settings: token, minimum age, filters, path rules, managed connection. `triggers` holds every other trigger except Google Drive monitors, which live under `gdrive/monitors`. The UI lists all three on the Triggers page. Deleting an Arr removes all of it, including its managed webhook.
 - **Concurrent edits:** each resource carries a version (`ETag`). A change sent with an older version (`If-Match`) is refused with 412, and the UI says the item changed elsewhere and offers to reload it. A change sent without a version is applied.
 - **Deleting something in use** is refused with 409 and the list of what uses it (for example the triggers, anchors and destinations that name a target). Nothing else is removed as a side effect.
@@ -111,7 +111,7 @@ The detailed schema will be generated from the same Rust types the API uses, as 
 | `/api/v1/…` | the UI, scripts | session cookie with CSRF, or `Authorization: Bearer <api key>`. A read-only key may only `GET`, and not the admin-only reads marked below. Signing in, setup and the OpenAPI document need neither. |
 | `/api/v1/events` | live updates | as above; a read-only key is enough |
 | `/api/v1/gdrive/oauth/callback` | Google's redirect | the signed `state` value |
-| `/triggers/{id}` | webhooks from Arrs and other callers | that trigger's own token |
+| `/triggers/{id}` (a random UUID) | webhooks from Arrs and other callers | that trigger's own token |
 | `/triggers/{sonarr,radarr,lidarr,manual}`, `/triggers/a-train/{drive}`, `/triggers/bazarr`, `/stats`, `/api/config-template` | callers written for autoscan, A-Train and Bazarr | the matching trigger's credentials |
 | `/health` | service checks | none; reveals only ok or not ok |
 | `/metrics` | Prometheus | an API key of any scope |
