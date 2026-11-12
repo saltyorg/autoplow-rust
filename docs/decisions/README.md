@@ -26,4 +26,5 @@ Format: Status, Date, Context, Decision, Alternatives Considered, Consequences. 
 | [0020](0020-what-a-target-can-see.md) | What a target can see decides when it is scanned | Accepted |
 | [0021](0021-rclone-settings-applied-at-runtime.md) | rclone settings are applied to the running daemon | Accepted |
 | [0022](0022-sizes-in-binary-units.md) | Sizes are binary units, budgets included | Accepted |
-| [0023](0023-fresh-context-review-of-every-change.md) | Every change is reviewed by a fresh-context agent | Accepted |
+| [0023](0023-fresh-context-review-of-every-change.md) | Every change is reviewed by a fresh-context agent | Accepted (amended by 0024) |
+| [0024](0024-reviews-by-tier-and-lighter-process.md) | Reviews by tier, skills at phase changes, rust-skills off | Accepted |

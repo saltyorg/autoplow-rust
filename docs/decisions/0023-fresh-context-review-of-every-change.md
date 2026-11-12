@@ -1,7 +1,7 @@
 # ADR-0023: Every change is reviewed by a fresh-context agent
 
 ## Status
-Accepted
+Accepted. Amended by [ADR-0024](0024-reviews-by-tier-and-lighter-process.md): the review is sized to the change (none for a commit of documents only, which needs no `Review:` line), a fix is reviewed again only when it changes behaviour beyond the finding, findings are weighed against real use, the reminder on each prompt is gone and the rust-skills plugin is switched off.
 
 ## Date
 2026-11-11
